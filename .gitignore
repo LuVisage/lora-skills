@@ -1,0 +1,31 @@
+# Generated output
+output/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+lora_skill_env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Design docs (keep only README)
+优化方案-基于行业最佳实践.md
+设计文档-版本对比.md
+📦 项目整体架构.md

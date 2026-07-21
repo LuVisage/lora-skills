@@ -1,0 +1,8 @@
+{
+  "name": "lora-trainer",
+  "version": "2.0.0",
+  "description": "LoRA/QLoRA 大模型微调智能助手 — 数据分析、显存计算、参数推荐、训练脚本生成",
+  "author": "lusha",
+  "homepage": "https://github.com/lusha/lora-trainer",
+  "strict": false
+}

@@ -1,0 +1,46 @@
+{
+  "name": "lora-trainer",
+  "version": "2.0.0",
+  "description": "LoRA/QLoRA fine-tuning assistant for Claude Code — data analysis, memory planning, hyperparameter recommendation, and training script generation",
+  "keywords": [
+    "claude-code",
+    "claude-code-plugin",
+    "claude-skill",
+    "lora",
+    "qlora",
+    "fine-tuning",
+    "llm",
+    "peft",
+    "model-training",
+    "ai",
+    "deep-learning"
+  ],
+  "author": "LuVisage",
+  "license": "MIT",
+  "homepage": "https://github.com/LuVisage/lora-skills",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LuVisage/lora-skills.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LuVisage/lora-skills/issues"
+  },
+  "files": [
+    ".claude-plugin/",
+    "commands/",
+    "agents/",
+    "skills/",
+    "scripts/",
+    "templates/",
+    "examples/",
+    "README.md",
+    "LICENSE",
+    "requirements.txt"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "python -c \"from scripts.analyzer import quick_analyze; from scripts.memory_calc import quick_calc; from scripts.lora_advisor import quick_recommend; r = quick_analyze('examples/sample_data.jsonl'); m = quick_calc('qwen2-7b'); c = quick_recommend(r['length']['total_samples'], '7b', 'chat'); print('✅ All modules OK')\""
+  }
+}
