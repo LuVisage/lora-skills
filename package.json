@@ -1,6 +1,6 @@
 {
   "name": "lora-trainer",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "LoRA/QLoRA fine-tuning assistant for Claude Code — data analysis, memory planning, hyperparameter recommendation, and training script generation",
   "keywords": [
     "claude-code",
