@@ -12,12 +12,64 @@ import yaml
 class ScriptBuilder:
     """根据 LoRA 配置生成训练脚本、推理脚本和配置文件。"""
 
-    def __init__(self, config: Dict, output_dir: str = "./output"):
+    def __init__(
+        self,
+        config: Dict,
+        output_dir: str = "./output",
+        data_format: str = "instruction-output",
+        max_seq_length: int = 2048,
+    ):
         self.config = config
         self.output_dir = output_dir
+        self.data_format = data_format
+        self.max_seq_length = max_seq_length
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # ── 训练脚本 ────────────────────────────────────────────
+
+    def _build_format_fn(self) -> str:
+        """根据数据格式生成对应的格式化函数代码。"""
+        if self.data_format in ("messages", "conversations"):
+            return '''def format_messages(example):
+    """将 messages 格式化为 ChatML 训练文本。"""
+    messages = example["messages"]
+    # 使用 tokenizer 的 chat template（如果有的话）
+    # 否则用通用 ChatML 格式
+    text_parts = []
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        text_parts.append(f"<|{role}|>\\n{content}")
+    text = "\\n".join(text_parts) + "\\n<|assistant|>\\n"
+    return {"text": text}'''
+        elif self.data_format == "instruction-output":
+            return '''def format_instruction(example):
+    """将 instruction/output 格式化为训练文本。"""
+    text = f"### Instruction:\\n{example['instruction']}\\n\\n### Response:\\n{example['output']}"
+    return {"text": text}'''
+        else:
+            # 未知格式：同时生成三种尝试
+            return '''def format_auto(example):
+    """自动检测格式并转换。"""
+    if "messages" in example and isinstance(example["messages"], list):
+        parts = []
+        for msg in example["messages"]:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            parts.append(f"<|{role}|>\\n{content}")
+        text = "\\n".join(parts) + "\\n<|assistant|>\\n"
+    elif "instruction" in example and "output" in example:
+        text = f"### Instruction:\\n{example['instruction']}\\n\\n### Response:\\n{example['output']}"
+    elif "conversations" in example:
+        parts = []
+        for turn in example["conversations"]:
+            role = turn.get("role", turn.get("from", "user"))
+            content = turn.get("content", turn.get("value", ""))
+            parts.append(f"<|{role}|>\\n{content}")
+        text = "\\n".join(parts) + "\\n<|assistant|>\\n"
+    else:
+        raise ValueError(f"不支持的数据格式: {list(example.keys())}")
+    return {"text": text}'''
 
     def build_training_script(self) -> str:
         """生成完整的 QLoRA 训练脚本。"""
@@ -29,8 +81,15 @@ class ScriptBuilder:
         epochs = self.config["epochs"]["value"]
         bs = self.config["batch_size"]["value"]
         ga = self.config["gradient_accumulation"]["value"]
+        max_len = self.max_seq_length
 
         modules_str = str(modules)
+        format_fn_code = self._build_format_fn()
+
+        # 计算 warmup steps（总步数的 10%）
+        num_samples = self.config.get("num_samples", 1000)
+        total_steps = (num_samples // (bs * ga)) * epochs if bs * ga > 0 else 100
+        warmup = max(10, total_steps // 10)
 
         script = f'''#!/usr/bin/env python
 # -*- coding: utf-8 -*-
@@ -46,6 +105,8 @@ LoRA 微调训练脚本
   - Learning Rate: {lr:.2e}
   - Epochs: {epochs}
   - Batch Size: {bs} × Gradient Accumulation: {ga} = Effective Batch: {bs * ga}
+  - Max Seq Length: {max_len}
+  - Data Format: {self.data_format}
 """
 
 import torch
@@ -63,15 +124,15 @@ from peft import (
     prepare_model_for_kbit_training,
     TaskType,
 )
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 import os
 
 # ═══════════════════════════════════════════════════════════
 # 配置区域 — 请根据实际情况修改以下路径
 # ═══════════════════════════════════════════════════════════
 
-MODEL_NAME = "{{model_path}}"   # 模型路径或 HuggingFace ID
-DATA_PATH = "{{data_path}}"     # JSONL 数据文件路径
+MODEL_NAME = "{{{{model_path}}}}"   # TODO: 模型路径或 HuggingFace ID
+DATA_PATH = "{{{{data_path}}}}"     # TODO: JSONL 数据文件路径
 OUTPUT_DIR = "{self.output_dir}/lora_{self.timestamp}"
 
 # ═══════════════════════════════════════════════════════════
@@ -108,7 +169,8 @@ training_args = TrainingArguments(
     per_device_train_batch_size={bs},
     gradient_accumulation_steps={ga},
     learning_rate={lr:.2e},
-    warmup_steps=100,
+    warmup_steps={warmup},
+    lr_scheduler_type="cosine",
     logging_steps=10,
     save_steps=500,
     eval_steps=500,
@@ -153,20 +215,24 @@ model.print_trainable_parameters()
 
 print("📊 加载数据...")
 
-def format_instruction(example):
-    """将 instruction/output 格式化为训练文本。"""
-    text = f"### Instruction:\\n{{example['instruction']}}\\n\\n### Response:\\n{{example['output']}}"
-    return {{"text": text}}
+{format_fn_code}
 
 dataset = load_dataset("json", data_files=DATA_PATH)
-dataset = dataset.map(format_instruction)
+
+# 自动 split：如果没有单独的 eval 文件，从训练集切 10%
+if "train" not in dataset:
+    dataset = dataset["train"].train_test_split(test_size=0.1, seed=42)
+
+format_fn_name = [k for k in locals().keys() if k.startswith("format_")][0]
+format_fn = locals()[format_fn_name]
+dataset = dataset.map(format_fn)
 
 def tokenize(examples):
     return tokenizer(
         examples["text"],
         truncation=True,
         padding=False,
-        max_length=2048,
+        max_length={max_len},
     )
 
 tokenized = dataset.map(tokenize, batched=True, remove_columns=dataset["train"].column_names)
@@ -182,6 +248,7 @@ trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=tokenized["train"],
+    eval_dataset=tokenized.get("test"),
     data_collator=data_collator,
 )
 

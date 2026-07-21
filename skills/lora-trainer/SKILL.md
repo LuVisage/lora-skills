@@ -75,10 +75,12 @@ effort: high
 样本 ≥ 20000       → r=32    大数据集，低 rank 会欠拟合
 ```
 
-任务类型调整：
-- 代码任务 → r 至少 16。代码语法结构复杂，低 rank 表示能力不足。
-- 数学推理 → r 至少 16。理由同上。
+任务类型调整（受数据量上限约束）：
+- 代码任务 → r 建议 16，但不超过当前数据量区间的上限。样本 < 1000 时最高 r=8，样本 < 500 时最高 r=4。
+- 数学推理 → r 建议 16，约束同上。数据量不够时大 rank 比低 rank 效果更差。
 - 角色扮演 → r 不超过 8。目标是注入风格而非改变模型底层能力。
+
+关键原则：**数据量约束优先于任务类型调整。** 300 条代码数据用 r=16 必定过拟合，效果不如 r=4。
 
 ### Alpha
 
@@ -95,6 +97,7 @@ effort: high
 代码      → [q_proj, k_proj, v_proj, o_proj]
 数学      → [q_proj, v_proj, up_proj, down_proj, gate_proj]
 角色扮演  → [v_proj]
+CPT       → [q_proj, k_proj, v_proj, o_proj, up_proj, down_proj, gate_proj]
 ```
 
 模型 ≥ 13B 时，所有任务类型追加 o_proj。
@@ -143,6 +146,35 @@ GPU < 8GB    → batch_size=1,  gradient_accumulation=16
 > 48GB       → batch_size=16, gradient_accumulation=1
 ```
 
+数据量修正（调整有效 batch 目标）：
+- 样本 < 200 → 目标有效 batch=4 或 8（小 batch 噪声有正则化效果）
+- 样本 > 50k → 目标有效 batch=32 或 64（大批量减少梯度方差）
+
+### DoRA（推荐替代 LoRA）
+
+DoRA (Weight-Decomposed Low-Rank Adaptation) 将预训练权重分解为幅度+方向，只对方向做低秩更新。相同 rank 下效果稳定优于 LoRA，数学/代码任务提升尤为明显。
+
+```
+适用场景: 所有任务均可使用，数学/代码任务推荐优先选择
+rank 规则: 与 LoRA 相同
+额外显存: ~0（仅多了 magnitude vector，可忽略）
+使用方式: PEFT 库中 import DoRAConfig 或 LoraConfig(use_dora=True)
+```
+
+用户问"DoRA 还是 LoRA"时：数据 < 1000 条优先 DoRA（正则化效果更好），数学/代码任务优先 DoRA，简单聊天任务两者皆可。
+
+### 学习率调度器
+
+```
+默认: cosine（平滑衰减，通用场景最稳）
+代码: cosine（复杂 loss landscape 需要平滑）
+数学: cosine（保护推理链，不推荐 linear 的陡降）
+角色扮演: linear（简单任务，快速收敛）
+CPT（继续预训练）: constant_with_warmup（保持恒定 lr）
+```
+
+warmup 比例：总步数的 10%（最少 10 步）。小数据集尤其重要——warmup 太大会浪费宝贵的训练步数。
+
 ---
 
 ## 显存估算
@@ -153,11 +185,13 @@ GPU < 8GB    → batch_size=1,  gradient_accumulation=16
 python -c "
 import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}')
 from scripts.memory_calc import quick_calc
-mem = quick_calc(model_name='<模型名>', seq_length=<序列长度>, batch_size=<bs>, lora_r=<rank>)
+mem = quick_calc(model_name='<模型名>', seq_length=<序列长度>, batch_size=<bs>, lora_r=<rank>, num_modules=<模块数>)
 for k,v in mem.items():
     print(f'{k}: {v}')
 "
 ```
+
+`num_modules` 按 target_modules 数量填：chat=2, code=4, math=5, roleplay=1。这个数字直接影响优化器显存计算。
 
 快速参考值见 `references/vram-reference.md`（QLoRA 4-bit, seq=2048, bs=4, r=8 下的常见模型显存占用）。
 
@@ -212,7 +246,11 @@ print(r['report'])
 import sys; sys.path.insert(0, "${CLAUDE_PLUGIN_ROOT}")
 from scripts.script_builder import ScriptBuilder
 config = { ... }
-builder = ScriptBuilder(config)
+builder = ScriptBuilder(
+    config,
+    data_format='<检测到的格式>',   # instruction-output / messages / conversations
+    max_seq_length=<p95长度>,
+)
 paths = builder.build_all()
 ```
 
@@ -220,6 +258,25 @@ paths = builder.build_all()
 1. 编辑训练脚本中的 `MODEL_NAME` 和 `DATA_PATH`
 2. 安装依赖：`pip install -r requirements.txt`
 3. 运行训练：`python train_lora_xxx.py`
+
+### Step 6: 评估
+
+训练完成后，建议用户评估微调效果。询问是否生成评估脚本：
+
+```python
+import sys; sys.path.insert(0, "${CLAUDE_PLUGIN_ROOT}")
+from scripts.evaluator import Evaluator
+ev = Evaluator('<测试数据路径>')
+eval_script = ev.build_eval_script()
+```
+
+评估脚本对比基座模型 vs LoRA 模型在相同 prompt 上的输出，保存到 `eval_results.json`。
+
+告诉用户评估要点：
+- 看输出是否遵循了训练数据的格式/风格（格式一致性）
+- 看事实性知识是否保留（不要因微调引入幻觉）
+- 建议留 10-20 条数据不参与训练，专门用于评估
+- 如果效果不理想 → 排查数据质量 → 调整参数 → 重新训练
 
 ---
 
@@ -274,7 +331,45 @@ paths = builder.build_all()
 **常见反馈的回应：**
 - 用户说 "rank 能不能大一点" → "可以调到 16，但 2,340 条数据用 16 风险不大。如果你想要更强效果可以试。"
 - 用户说 "学习率太高了吧" → "2e-4 是 LoRA 的行业基准。想保守的话可以降到 1e-4，但收敛会慢一些。"
-- 用户说 "就按这个来" → 调用 ScriptBuilder 生成文件，然后列出生成的文件路径和下一步操作。
+- 用户说 "就按这个来" → 调用 ScriptBuilder 生成文件，列出生成的文件路径和下一步操作。生成后询问："训练完成后需要我帮你生成评估脚本吗？可以对比基座模型和微调模型的效果差异。"
+
+---
+
+## 继续预训练 (CPT)
+
+CPT 和 SFT 有本质区别：CPT 是教模型新领域的知识（如医学、法律），SFT 是教模型按特定格式回答问题。
+
+### CPT vs SFT 参数差异
+
+```
+参数          SFT（指令微调）          CPT（继续预训练）
+─────────────────────────────────────────────────────
+rank          r=4-32（数据驱动）       r=16-64（需要更强知识注入）
+alpha         2×r                      2×r（标准比例不变）
+target_mods   [q,v] 或 [q,k,v,o]      [q,k,v,o,up,down,gate]（全层训练）
+lr            1e-4 ~ 3e-4              5e-5 ~ 1e-4（更保守）
+epochs        1-5                      1-3（数据通常较多）
+dropout       0.05-0.15                0.05（CPT 数据量大，不需要高 dropout）
+数据格式       instruction/output 对    纯文本段落（JSONL 每行一个 text 字段）
+模板          需要 instruction 模板     不需要模板，直接拼接文本
+packing       不必须                    强烈建议（短文本拼成长序列）
+目标有效batch 16                       32-64（更大 batch 稳定训练）
+```
+
+### CPT 数据格式
+
+```
+{"text": "第一章：细胞生物学概述\n\n细胞是生命活动的基本单位..."}
+{"text": "深度学习在医疗影像分析中的应用日益广泛..."}
+```
+
+### CPT 执行流程
+
+1. 确认用户意图是 CPT 而非 SFT（关键区分：用户是否想在特定领域注入知识？）
+2. 数据检查：确认每行有 `text` 字段、估算总 token 量（CPT 建议 > 10M tokens）
+3. 显存计算：target_modules 数量多（7 个），优化器显存比 SFT 高 3-4×
+4. 参数推荐：用 CPT 专用规则（上表），启用 packing
+5. 生成脚本：使用纯文本拼接模板，不添加 instruction 前缀
 
 ---
 
@@ -324,6 +419,51 @@ paths = builder.build_all()
 - 修改已有训练脚本
 - 建议安装或卸载 Python 包
 - `--auto` 模式下开始自动训练
+
+---
+
+## 训练时间估算
+
+给用户一个大致预期，避免"要训练多久"被问两遍。
+
+```
+硬件假设: RTX 4090 (24GB), QLoRA 4-bit, 7B 模型, FP16
+
+1,000 条, seq=2048, bs=4, 3 epochs → ~30-60 分钟
+5,000 条, seq=2048, bs=4, 2 epochs → ~2-4 小时
+20,000 条, seq=2048, bs=4, 1 epoch → ~3-6 小时
+50,000 条, seq=2048, bs=8, 1 epoch → ~5-10 小时
+
+CPU 推断公式: (样本数 × 平均长度 × epochs) / (GPU算力系数 × batch_size)
+              RTX 4090 算力系数 ≈ 2000 tokens/sec (7B QLoRA)
+```
+
+## 多卡训练
+
+用户有多张 GPU 时，给出简要指引，不改动生成的脚本。
+
+- **2× GPU, 相同型号** → 推荐 DeepSpeed ZeRO-2。启动：`deepspeed --num_gpus=2 train.py --deepspeed ds_config.json`
+- **4× GPU+** → 推荐 DeepSpeed ZeRO-3。显存几乎线性扩展。
+- **单卡就够了** → 不要推荐多卡。7B QLoRA 用 24GB 单卡绰绰有余。
+- **70B+ 模型** → 必须多卡或量化到 4-bit + 单卡大显存（48GB+）。
+
+多卡训练的 batch_size 计算：`per_device_batch_size × num_gpus × gradient_accumulation`。
+
+## Packing（序列打包）
+
+把多个短训练样本拼成一条长序列，提升 GPU 利用率。
+
+```
+适用场景:
+  ✅ CPT（文本段落通常 < max_length）
+  ✅ 短问答（平均 < 500 tokens, max_length=4096）
+  ❌ 长文本（平均 > 2048 tokens, 浪费 token 去拼接）
+  ❌ 严格需要 attention mask 的场景（packing 会干扰 mask）
+
+效果:  短数据场景下吞吐量提升 3-10×
+代价:  实现复杂度增加（需要正确构造 position_ids 和 attention_mask）
+PEFT 库方式: 使用 ConstantLengthDataset 或 SFTTrainer 的 packing=True
+```
 
 ---
 

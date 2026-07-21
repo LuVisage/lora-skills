@@ -41,15 +41,25 @@ class LoRAAdvisor:
             r = 32
             reason = "超大数据集（>20k），r=32 捕获复杂模式"
 
-        # 任务类型调整
+        # 任务类型调整（受数据量上限约束）
+        # 数据量不足时，任务调整不能超越数据量区间的上限
+        data_ceiling = 4 if self.num_samples < 500 else (8 if self.num_samples < 1000 else 999)
         if self.task_type == "code":
-            if r < 16:
-                r = 16
-            reason += "；代码任务需要更高 rank 学习语法结构"
+            target_r = 16
+            if target_r > data_ceiling:
+                r = data_ceiling
+                reason += f"；代码任务建议 r=16，但数据仅 {self.num_samples} 条，降为 r={data_ceiling} 防止过拟合"
+            elif r < target_r:
+                r = target_r
+                reason += "；代码任务需要更高 rank 学习语法结构"
         elif self.task_type == "math":
-            if r < 16:
-                r = 16
-            reason += "；数学推理需要更高 rank 学习推理链"
+            target_r = 16
+            if target_r > data_ceiling:
+                r = data_ceiling
+                reason += f"；数学推理建议 r=16，但数据仅 {self.num_samples} 条，降为 r={data_ceiling} 防止过拟合"
+            elif r < target_r:
+                r = target_r
+                reason += "；数学推理需要更高 rank 学习推理链"
         elif self.task_type == "roleplay":
             if r > 8:
                 r = 8
