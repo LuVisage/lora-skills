@@ -10,6 +10,8 @@
 # lora-trainer
 
 > LoRA / QLoRA fine-tuning assistant for AI coding agents.
+
+**English** | [简体中文](README.zh-CN.md)
 > One command from raw data to a runnable training script.
 
 ## Why?
