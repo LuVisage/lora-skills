@@ -1,6 +1,6 @@
 ---
 name: lora-trainer
-version: 2.1.0
+version: 2.3.0
 description: >-
   LoRA / QLoRA fine-tuning assistant. Use when the user asks to "微调模型",
   "fine-tune", "LoRA微调", "QLoRA", "训练模型", "炼丹", "SFT", "instruction

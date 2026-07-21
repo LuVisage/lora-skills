@@ -18,11 +18,13 @@ class ScriptBuilder:
         output_dir: str = "./output",
         data_format: str = "instruction-output",
         max_seq_length: int = 2048,
+        task_type: str = "chat",
     ):
         self.config = config
         self.output_dir = output_dir
         self.data_format = data_format
         self.max_seq_length = max_seq_length
+        self.task_type = task_type.lower()
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # ── 训练脚本 ────────────────────────────────────────────
@@ -40,7 +42,7 @@ class ScriptBuilder:
         role = msg.get("role", "user")
         content = msg.get("content", "")
         text_parts.append(f"<|{role}|>\\n{content}")
-    text = "\\n".join(text_parts) + "\\n<|assistant|>\\n"
+    text = "\\n".join(text_parts)
     return {"text": text}'''
         elif self.data_format == "instruction-output":
             return '''def format_instruction(example):
@@ -57,7 +59,7 @@ class ScriptBuilder:
             role = msg.get("role", "user")
             content = msg.get("content", "")
             parts.append(f"<|{role}|>\\n{content}")
-        text = "\\n".join(parts) + "\\n<|assistant|>\\n"
+        text = "\\n".join(parts)
     elif "instruction" in example and "output" in example:
         text = f"### Instruction:\\n{example['instruction']}\\n\\n### Response:\\n{example['output']}"
     elif "conversations" in example:
@@ -66,7 +68,7 @@ class ScriptBuilder:
             role = turn.get("role", turn.get("from", "user"))
             content = turn.get("content", turn.get("value", ""))
             parts.append(f"<|{role}|>\\n{content}")
-        text = "\\n".join(parts) + "\\n<|assistant|>\\n"
+        text = "\\n".join(parts)
     else:
         raise ValueError(f"不支持的数据格式: {list(example.keys())}")
     return {"text": text}'''
@@ -90,6 +92,14 @@ class ScriptBuilder:
         num_samples = self.config.get("num_samples", 1000)
         total_steps = max(1, (num_samples // (bs * ga)) * epochs if bs * ga > 0 else 100)
         warmup = min(max(10, total_steps // 10), max(1, total_steps - 1))
+
+        # 根据任务类型调整 scheduler 和 NEFTune
+        scheduler_map = {
+            "cpt": "constant_with_warmup",
+            "roleplay": "linear",
+        }
+        lr_scheduler = scheduler_map.get(self.task_type, "cosine")
+        neftune_alpha = 0 if self.task_type == "cpt" else 5
 
         script = f'''#!/usr/bin/env python
 # -*- coding: utf-8 -*-
@@ -170,17 +180,19 @@ training_args = TrainingArguments(
     gradient_accumulation_steps={ga},
     learning_rate={lr:.2e},
     warmup_steps={warmup},
-    lr_scheduler_type="cosine",
+    lr_scheduler_type="{lr_scheduler}",  # 根据任务类型: cosine(默认)/linear(角色扮演)/constant_with_warmup(CPT)
     logging_steps=10,
-    save_steps=min(500, max(50, total_steps // 5)),
-    eval_steps=min(500, max(50, total_steps // 5)),
-    evaluation_strategy="steps" if os.path.exists(DATA_PATH.replace("train", "eval")) else "no",
+    save_steps=min(500, max(50, {total_steps // 5})),
+    eval_steps=min(500, max(50, {total_steps // 5})),
+    evaluation_strategy="steps",  # 自动 split 保证总有 eval 集
     save_total_limit=3,
     load_best_model_at_end=True,
+    metric_for_best_model="eval_loss",
+    greater_is_better=False,
     bf16=True,  # Ampere+ GPU (RTX 30/40, A100) 推荐 bf16，更稳定；老 GPU 改 fp16=True
     gradient_checkpointing=True,
     optim="adamw_8bit",
-    neftune_noise_alpha=5,   # NEFTune: embedding 加噪，稳定提升 3-5%
+    neftune_noise_alpha={neftune_alpha},   # NEFTune: embedding 加噪 (CPT 关闭)
     max_grad_norm=1.0,        # 梯度裁剪，防止 loss spike
     report_to="none",
 )
@@ -222,9 +234,11 @@ print("📊 加载数据...")
 
 dataset = load_dataset("json", data_files=DATA_PATH)
 
-# 自动 split：如果没有单独的 eval 文件，从训练集切 10%
-if "train" not in dataset:
+# 自动 split：如果数据集没有 test/eval 分片，从训练集切 10%
+if isinstance(dataset, dict) and "test" not in dataset and "eval" not in dataset:
     dataset = dataset["train"].train_test_split(test_size=0.1, seed=42)
+elif not isinstance(dataset, dict):
+    dataset = dataset.train_test_split(test_size=0.1, seed=42)
 
 format_fn_name = [k for k in locals().keys() if k.startswith("format_")][0]
 format_fn = locals()[format_fn_name]
@@ -361,7 +375,7 @@ if __name__ == "__main__":
         if user_input.lower() in ["quit", "exit", "q"]:
             break
         reply = chat(model, tokenizer, user_input)
-        print(f"🤖 助手: {reply}\\n")
+        print(f"🤖 助手: {{reply}}\\n")
 '''
         return script
 
@@ -370,7 +384,7 @@ if __name__ == "__main__":
     def build_config_yaml(self) -> str:
         """生成 YAML 配置文件。"""
         config_dict = {
-            "skill_version": "2.2.1",
+            "skill_version": "2.3.0",
             "generated_at": self.timestamp,
             "lora_config": {
                 "r": self.config["rank"]["value"],

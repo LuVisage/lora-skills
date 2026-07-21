@@ -49,18 +49,50 @@ class DataAnalyzer:
 
         return cjk_count * 2.0 + other_count * 0.28
 
+    # ── 文本提取 ───────────────────────────────────────────
+
+    def _extract_full_text(self, item: Dict) -> str:
+        """根据数据格式提取完整训练文本，用于长度分析。"""
+        # messages 格式
+        if "messages" in item and isinstance(item["messages"], list):
+            return " ".join(msg.get("content", "") for msg in item["messages"])
+        # conversations 格式
+        if "conversations" in item and isinstance(item["conversations"], list):
+            return " ".join(
+                turn.get("content", turn.get("value", ""))
+                for turn in item["conversations"]
+            )
+        # instruction-output 格式（默认）
+        return item.get("instruction", "") + " " + item.get("output", "")
+
+    def _extract_output_text(self, item: Dict) -> str:
+        """提取回复/输出部分，用于质量检查。"""
+        # messages 格式：最后一条 assistant 消息
+        if "messages" in item and isinstance(item["messages"], list):
+            for msg in reversed(item["messages"]):
+                if msg.get("role") == "assistant":
+                    return msg.get("content", "")
+            return ""
+        # conversations 格式：最后一个 assistant 轮次
+        if "conversations" in item and isinstance(item["conversations"], list):
+            for turn in reversed(item["conversations"]):
+                role = turn.get("role", turn.get("from", ""))
+                if role in ("assistant", "bot"):
+                    return turn.get("content", turn.get("value", ""))
+            return ""
+        # instruction-output 格式（默认）
+        return item.get("output", "")
+
     # ── 长度分析 ───────────────────────────────────────────
 
     def analyze_length_distribution(self) -> Dict:
-        """分析 instruction + output 的字符长度和估算 token 长度分布。"""
+        """分析训练文本的字符长度和估算 token 长度分布。"""
         char_lengths = []
         token_lengths = []
         for item in self.data:
-            instr = item.get("instruction", "")
-            out = item.get("output", "")
-            char_len = len(instr) + len(out)
-            char_lengths.append(char_len)
-            token_lengths.append(self._estimate_tokens(instr) + self._estimate_tokens(out))
+            text = self._extract_full_text(item)
+            char_lengths.append(len(text))
+            token_lengths.append(self._estimate_tokens(text))
 
         if not char_lengths:
             return {
@@ -99,18 +131,15 @@ class DataAnalyzer:
                 "duplicate_ratio": 0,
             }
 
-        # 1. 空回复
+        # 1. 空回复（格式感知）
         empty_count = sum(
             1
             for item in self.data
-            if len(item.get("output", "").strip()) < 5
+            if len(self._extract_output_text(item).strip()) < 5
         )
 
-        # 2. 重复数据
-        texts = [
-            item.get("instruction", "") + item.get("output", "")
-            for item in self.data
-        ]
+        # 2. 重复数据（格式感知：用完整文本比较）
+        texts = [self._extract_full_text(item) for item in self.data]
         duplicate_count = len(texts) - len(set(texts))
 
         # 3. 控制字符
@@ -126,7 +155,7 @@ class DataAnalyzer:
         # 4. 语言混合度（简单检测：同时包含中英文的样本比例）
         bilingual = 0
         for item in self.data:
-            text = item.get("instruction", "") + item.get("output", "")
+            text = self._extract_full_text(item)
             has_cn = any("一" <= c <= "鿿" for c in text)
             has_en = any(c.isascii() and c.isalpha() for c in text)
             if has_cn and has_en:
@@ -187,7 +216,7 @@ class DataAnalyzer:
             f"数据格式: {fmt['format']}",
             f"字段: {', '.join(fmt['fields'])}",
             "",
-            "📏 字符长度 (instruction + output):",
+            "📏 完整文本字符长度:",
             f"  最短: {length_stats['min']} | 最长: {length_stats['max']}",
             f"  平均: {length_stats['mean']} | 中位数: {length_stats['median']}",
             f"  P80: {length_stats['percentile_80']} | P95: {length_stats['percentile_95']}",

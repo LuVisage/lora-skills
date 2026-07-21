@@ -43,8 +43,17 @@ class LoRAAdvisor:
 
         # 任务类型调整（受数据量上限约束）
         # 数据量不足时，任务调整不能超越数据量区间的上限
-        data_ceiling = 4 if self.num_samples < 500 else (8 if self.num_samples < 1000 else 999)
-        if self.task_type == "code":
+        data_ceiling = 4 if self.num_samples < 500 else (8 if self.num_samples < 1000 else (16 if self.num_samples < 5000 else (32 if self.num_samples < 20000 else 999)))
+        if self.task_type == "cpt":
+            # CPT 需要更强知识注入容量，rank 在数据量区间基础上加一档
+            cpt_ceiling = 8 if self.num_samples < 500 else (16 if self.num_samples < 1000 else (32 if self.num_samples < 5000 else (64 if self.num_samples < 20000 else 64)))
+            if cpt_ceiling > data_ceiling:
+                r = cpt_ceiling
+                reason += f"；CPT 需要更强 rank 注入领域知识，r={cpt_ceiling}"
+            else:
+                r = min(data_ceiling, 64)
+                reason += f"；CPT 模式，r={r}"
+        elif self.task_type == "code":
             target_r = 16
             if target_r > data_ceiling:
                 r = data_ceiling
@@ -69,7 +78,10 @@ class LoRAAdvisor:
 
     def recommend_alpha(self, r: int) -> Tuple[int, str]:
         """推荐 alpha 值。通常 alpha = 2*r，但任务类型会影响。"""
-        if self.task_type == "roleplay":
+        if self.task_type == "cpt":
+            alpha = r * 2
+            reason = f"CPT：alpha={alpha}（2×rank），标准比例"
+        elif self.task_type == "roleplay":
             alpha = r * 4
             reason = f"角色扮演：alpha={alpha}（4×rank），增强风格学习强度"
         elif self.task_type == "code":
@@ -89,7 +101,10 @@ class LoRAAdvisor:
         task = self.task_type
         size = self.model_size
 
-        if task == "code":
+        if task == "cpt":
+            modules = ["q_proj", "k_proj", "v_proj", "o_proj", "up_proj", "down_proj", "gate_proj"]
+            reason = "CPT（继续预训练）：训练全 7 层，最大化领域知识注入"
+        elif task == "code":
             modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
             reason = "代码任务：训练 Q/K/V/O 全部注意力层"
         elif task == "math":
@@ -103,8 +118,13 @@ class LoRAAdvisor:
             modules = ["q_proj", "v_proj"]
             reason = "通用对话：标准 Q/V 配置"
 
-        # 大模型额外加 o_proj
-        if size in ["13b", "70b", "72b", "67b", "34b"] and "o_proj" not in modules:
+        # 大模型（≥ 13B）额外加 o_proj
+        large_sizes = {13, 14, 20, 34, 67, 70, 72, 123, 405}
+        try:
+            size_b = int(self.model_size.replace("b", ""))
+        except ValueError:
+            size_b = 7  # 默认 7B
+        if size_b in large_sizes and "o_proj" not in modules:
             modules.append("o_proj")
             reason += "；大模型增加输出投影层"
 
@@ -112,6 +132,9 @@ class LoRAAdvisor:
 
     def recommend_dropout(self) -> Tuple[float, str]:
         """推荐 dropout 值。"""
+        if self.task_type == "cpt":
+            # CPT 数据通常量大，dropout 保持低位
+            return 0.05, "CPT 数据量通常较大，低 dropout (0.05)"
         if self.num_samples < 500:
             return 0.15, "极小数据集，高 dropout (0.15) 强力防过拟合"
         elif self.num_samples < 1000:
@@ -138,7 +161,10 @@ class LoRAAdvisor:
             reason = f"大 rank ({r})，高学习率 (5e-4) 加速收敛"
 
         # 任务微调
-        if self.task_type == "roleplay":
+        if self.task_type == "cpt":
+            lr = max(5e-5, min(lr, 1e-4))  # CPT 保守学习率
+            reason += "；CPT 降低学习率 (5e-5~1e-4) 保护预训练知识"
+        elif self.task_type == "roleplay":
             lr *= 1.5
             reason += "；角色扮演提高学习率增强风格学习"
         elif self.task_type == "math":
@@ -154,6 +180,8 @@ class LoRAAdvisor:
 
     def recommend_epochs(self) -> Tuple[int, str]:
         """推荐训练轮数。"""
+        if self.task_type == "cpt":
+            return 1, "CPT 数据量大，1 轮足够注入知识，多轮可能过拟合"
         if self.num_samples < 500:
             return 5, "极小数据集，5 轮充分学习"
         elif self.num_samples < 1000:
@@ -190,6 +218,17 @@ class LoRAAdvisor:
         epochs, epochs_reason = self.recommend_epochs()
         bs, bs_reason = self.recommend_batch_size(gpu_memory_gb)
 
+        # 目标有效 batch：根据任务类型和数据量调整
+        if self.task_type == "cpt":
+            target_effective_batch = 32  # CPT 需要更大 batch 稳定训练
+        elif self.num_samples < 200:
+            target_effective_batch = 8   # 小数据集用小 batch 增加噪声正则化
+        elif self.num_samples > 50000:
+            target_effective_batch = 32  # 大数据集用大批量减少梯度方差
+        else:
+            target_effective_batch = 16  # 标准目标
+        ga = max(1, target_effective_batch // bs)
+
         return {
             "rank": {"value": r, "reason": r_reason},
             "alpha": {"value": alpha, "reason": alpha_reason},
@@ -199,8 +238,8 @@ class LoRAAdvisor:
             "epochs": {"value": epochs, "reason": epochs_reason},
             "batch_size": {"value": bs, "reason": bs_reason},
             "gradient_accumulation": {
-                "value": max(1, 16 // bs),
-                "reason": f"梯度累积使有效 batch 达到 16",
+                "value": ga,
+                "reason": f"梯度累积使有效 batch 达到 {target_effective_batch}",
             },
             "task_type": self.task_type,
             "model_size": self.model_size,

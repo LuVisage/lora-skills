@@ -111,14 +111,27 @@ class MemoryCalculator:
         self.lora_r = lora_r
 
     def _lookup_model(self, name: str) -> Dict | None:
-        """模糊匹配模型名称，返回规格参数。"""
+        """模糊匹配模型名称，返回规格参数。
+
+        多个匹配时优先选择参数最接近 7B 的模型（最常用的 LoRA 微调规模）。
+        """
         if not name:
             return None
         name_lower = name.lower().replace("-", "").replace("_", "")
+        matches = []
         for key, spec in MODEL_DB.items():
-            if key.replace("-", "") in name_lower or name_lower in key.replace("-", ""):
-                return spec
-        return None
+            key_normalized = key.replace("-", "")
+            if key_normalized in name_lower or name_lower in key_normalized:
+                matches.append((key, spec))
+
+        if not matches:
+            return None
+        if len(matches) == 1:
+            return matches[0][1]
+
+        # 多个匹配：选参数最接近 7B 的（最常见微调规模）
+        matches.sort(key=lambda m: abs(m[1]["params"] - 7e9))
+        return matches[0][1]
 
     def _estimate_hidden_dim(self) -> int:
         """根据参数量估算隐藏维度。"""
@@ -223,20 +236,27 @@ class MemoryCalculator:
 
     def recommend(self, total_gb: float, quantized: bool) -> str:
         """根据总显存给出操作建议。"""
+        mode = "QLoRA 4-bit" if quantized else "LoRA FP16"
         if total_gb < 6:
-            return "✅ 可在 6GB 显卡上运行（如 RTX 3060/4060 笔记本）"
+            return f"✅ 可在 6GB 显卡上运行（{mode}，如 RTX 3060/4060 笔记本）"
         elif total_gb < 8:
-            return "✅ 可在 8GB 显卡上运行（如 RTX 3070/4060Ti）"
+            return f"✅ 可在 8GB 显卡上运行（{mode}，如 RTX 3070/4060Ti）"
         elif total_gb < 12:
-            return "✅ 可在 12GB 显卡上运行（如 RTX 3080/4070）"
+            return f"✅ 可在 12GB 显卡上运行（{mode}，如 RTX 3080/4070）"
         elif total_gb < 16:
-            return "✅ 可在 16GB 显卡上运行（如 RTX 4080）"
+            return f"✅ 可在 16GB 显卡上运行（{mode}，如 RTX 4080）"
         elif total_gb < 24:
-            return "⚠️ 需要 24GB 显存（如 RTX 3090/4090）。建议开启 QLoRA"
+            if quantized:
+                return f"✅ 可在 24GB 显卡上运行（{mode}，如 RTX 3090/4090）"
+            else:
+                return f"⚠️ 需要 24GB 显存（{mode}，如 RTX 3090/4090）。建议开启 QLoRA"
         elif total_gb < 48:
-            return "⚠️ 需要 48GB 显存（如 A6000）。建议减小 batch size 或序列长度"
+            return f"⚠️ 需要 48GB 显存（{mode}，如 A6000）。建议减小 batch size 或序列长度"
         else:
-            return "❌ 显存不足！请：1) 降低 seq_length  2) 减小 batch_size  3) 换更小的模型"
+            if not quantized:
+                return "❌ 显存不足！请：1) 开启 QLoRA 4-bit 量化  2) 降低 seq_length  3) 减小 batch_size  4) 换更小的模型"
+            else:
+                return "❌ 显存不足！请：1) 降低 seq_length  2) 减小 batch_size  3) 换更小的模型"
 
 
 # ── 便捷函数 ────────────────────────────────────────────────
