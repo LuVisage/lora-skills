@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lora-trainer"
+version = "2.4.0"
+description = "LoRA/QLoRA fine-tuning CLI — data analysis, VRAM planning, hyperparameter recommendation, and training script generation"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "LuVisage"}
+]
+keywords = [
+    "lora",
+    "qlora",
+    "fine-tuning",
+    "llm",
+    "peft",
+    "model-training",
+    "deep-learning",
+    "cli",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.0",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+train = [
+    "torch>=2.0.0",
+    "transformers>=4.35.0",
+    "peft>=0.7.0",
+    "datasets>=2.14.0",
+    "accelerate>=0.24.0",
+    "bitsandbytes>=0.41.0",
+    "scipy>=1.10.0",
+    "tqdm>=4.65.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/LuVisage/lora-skills"
+Repository = "https://github.com/LuVisage/lora-skills"
+Issues = "https://github.com/LuVisage/lora-skills/issues"
+
+[project.scripts]
+lora-trainer = "cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["cli*", "scripts*"]
