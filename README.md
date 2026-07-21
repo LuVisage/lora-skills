@@ -6,8 +6,14 @@
 ## 🚀 安装
 
 ```bash
-# 安装到 Claude Code
+# 方式一：npx（推荐，自动适配 Claude Code / Cursor / Codex）
+npx skills add LuVisage/lora-skills
+
+# 方式二：Claude Code 插件安装
 claude plugin install https://github.com/LuVisage/lora-skills --scope user
+
+# 方式三：npm
+npm install lora-trainer
 ```
 
 ## 🎮 使用
