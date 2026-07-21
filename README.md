@@ -1,84 +1,134 @@
-# 🎯 LoRA Trainer — Claude Code Plugin
+<div align="center">
 
-> 大模型 LoRA/QLoRA 微调智能助手。
-> 在 Claude Code 里输入 `/lora:analyze`，AI 帮你从数据分析到训练脚本生成一条龙搞定。
+<img src="https://img.shields.io/npm/v/lora-trainer?style=flat-square&color=blue" alt="npm version">
+<img src="https://img.shields.io/github/license/LuVisage/lora-skills?style=flat-square" alt="license">
+<img src="https://img.shields.io/github/stars/LuVisage/lora-skills?style=flat-square" alt="stars">
+<img src="https://img.shields.io/badge/platform-Claude%20Code%20%7C%20Cursor%20%7C%20Codex-orange?style=flat-square" alt="platforms">
 
-## 🚀 安装
+</div>
+
+# lora-trainer
+
+> LoRA / QLoRA fine-tuning assistant for AI coding agents.
+> One command from raw data to a runnable training script.
+
+## Why?
+
+Fine-tuning a large language model with LoRA shouldn't require reading five blog posts and memorizing the PEFT API. But today it does: you pick a rank by guess, calculate VRAM in a spreadsheet, and copy-paste training snippets from a 2023 Colab notebook.
+
+**lora-trainer** puts the decision rules inside your AI agent. It analyzes your data, calculates exact memory requirements against a catalog of 20+ model specs, recommends hyperparameters with reasoning, and generates a complete, syntax-checked training script — all through a slash command.
+
+## Quick Start
 
 ```bash
-# 方式一：npx（推荐，自动适配 Claude Code / Cursor / Codex）
+npx skills add LuVisage/lora-skills
+```
+
+Then in Claude Code, Cursor, or Codex:
+
+```
+/lora:analyze ./data/train.jsonl qwen2-7b chat
+```
+
+That's it. It will print a data report, a VRAM breakdown, recommended LoRA parameters with explanations, and save three files to `./output/`.
+
+## Install
+
+```bash
+# npx (auto-detects Claude Code / Cursor / Codex)
 npx skills add LuVisage/lora-skills
 
-# 方式二：Claude Code 插件安装
-claude plugin install https://github.com/LuVisage/lora-skills --scope user
+# Claude Code plugin
+claude plugin install https://github.com/LuVisage/lora-skills
 
-# 方式三：npm
+# npm
 npm install lora-trainer
 ```
 
-## 🎮 使用
+## Commands
 
-```
-# 完整分析（数据 → 显存 → 参数 → 脚本）
-/lora:analyze ./data/train.jsonl qwen2-7b chat
+| Command | What it does |
+|---------|-------------|
+| `/lora:analyze <data> [model] [task] [gpu]` | Full pipeline: data audit → VRAM estimate → hyperparameter recommendation → script generation |
+| `/lora:cook <data> [model] [task] [--auto]` | Same as analyze but concise output; `--auto` starts training after confirmation |
+| `/lora:check-data <data>` | Quick scan: sample count, length distribution, empty responses, duplicates |
 
-# 一键炼丹（精简输出）
-/lora:cook ./data/train.jsonl --model qwen2-7b --task chat
+Auto-triggers on natural language: say "帮我看看这个数据能不能微调" and the skill activates automatically.
 
-# 快速检查数据质量
-/lora:check-data ./data/train.jsonl
+## Features
 
-# 自然语言也能触发
-"帮我看看这个数据集，我想微调 Qwen2-7B"
-```
+- **Data audit** — detects format (instruction-output, messages, conversations), flags empty responses, duplicates, control characters, and length outliers
+- **VRAM calculator** — built-in spec catalog for 20+ models (Qwen2, LLaMA3, Mistral, ChatGLM, DeepSeek, Yi, Baichuan2, Phi-3, Gemma, InternLM2); estimates model weights, activations, optimizer states, and overhead
+- **Hyperparameter recommendation** — rank, alpha, target modules, dropout, learning rate, epochs, batch size; every value comes with a reason
+- **Script generation** — produces a complete QLoRA training script (Transformers + PEFT + BitsAndBytes), an inference script, and a YAML config
+- **Built-in knowledge** — 57 parameter rules direct in SKILL.md; Python scripts handle only exact numeric computation; all reference data in `references/`
 
-## 📂 项目结构
+## Supported Models
+
+Qwen2 (0.5B–72B), LLaMA3 (8B–70B), LLaMA2 (7B–70B), Mistral 7B, Mixtral 8×7B, ChatGLM3/4, DeepSeek (7B–67B), Yi (6B–34B), Baichuan2 (7B–13B), Phi-3 (mini/small/medium), Gemma (2B–7B), InternLM2 (7B–20B).
+
+Missing a model? Add one line to `references/model-catalog.md`.
+
+## Project Structure
 
 ```
 lora-trainer/
-├── .claude-plugin/plugin.json   # Plugin 元数据
-├── commands/                    # 斜杠命令
+├── .claude-plugin/plugin.json   # Plugin manifest
+├── commands/                    # Slash commands
 │   ├── analyze.md               # /lora:analyze
 │   ├── cook.md                  # /lora:cook
 │   └── check-data.md            # /lora:check-data
-├── agents/                      # 专用子 Agent
-│   ├── data-analyzer.md         # 数据诊断
-│   ├── memory-estimator.md      # 显存评估
-│   └── script-generator.md      # 脚本生成
-├── skills/lora-trainer/         # 自动激活 Skill
-│   ├── SKILL.md                 # 核心！内含所有推荐规则
-│   └── references/              # 参考资料（纯数据）
-│       ├── model-catalog.md     # 20+ 模型规格
-│       ├── recipes.md           # 预置配方
-│       └── faq.md               # 常见问题
-├── scripts/                     # Python 计算引擎（不做判断）
-│   ├── analyzer.py
-│   ├── memory_calc.py
-│   ├── lora_advisor.py
-│   ├── script_builder.py
-│   └── evaluator.py
-├── templates/                   # 代码模板
-├── examples/                    # 示例数据
+├── agents/                      # Sub-agents
+│   ├── data-analyzer.md
+│   ├── memory-estimator.md
+│   └── script-generator.md
+├── skills/lora-trainer/         # Auto-activating skill
+│   ├── SKILL.md                 # All recommendation rules (behavioral)
+│   └── references/              # Pure data, loaded on demand
+│       ├── model-catalog.md     # Model specs (20+)
+│       ├── recipes.md           # Preset configurations
+│       └── faq.md               # Common questions
+├── scripts/                     # Python computation layer
+│   ├── analyzer.py              # Data statistics
+│   ├── memory_calc.py           # VRAM estimation
+│   ├── lora_advisor.py          # Parameter recommendation engine
+│   ├── script_builder.py        # Training script generator
+│   └── evaluator.py             # Model evaluation
+├── templates/                   # Code templates
+├── examples/                    # Sample JSONL data
 └── requirements.txt
 ```
 
-## 🧠 设计理念
+## Design
 
-- **Claude 是大脑** — 所有推荐规则和判断逻辑在 SKILL.md 中
-- **Python 是手脚** — 只做精确数值计算（显存、数据统计、脚本模板填充）
-- **渐进式披露** — SKILL.md < 500 行，详细数据在 references/
+- **Agent is the brain** — all recommendation rules and judgment live in `SKILL.md`. The agent decides; scripts compute.
+- **Scripts are the hands** — Python handles exact numeric work: VRAM math, data statistics, and template rendering. No `if/else` decision logic in Python.
+- **Progressive disclosure** — SKILL.md is under 500 lines. Deep reference data stays in `references/` and loads only when needed.
 
-## ⚙️ 依赖
+## Requirements
 
 ```bash
 pip install -r requirements.txt
 ```
 
-实际训练还需要：
-- NVIDIA GPU (建议 8GB+)
-- CUDA Toolkit
-- PyTorch with CUDA support
+Training requires an NVIDIA GPU (8 GB+ recommended for 7B models with QLoRA), CUDA Toolkit, and PyTorch with CUDA.
 
-## 📄 License
+## Contributing
+
+Issues and PRs welcome. Before submitting, run the smoke test:
+
+```bash
+python -c "
+from scripts.analyzer import quick_analyze
+from scripts.memory_calc import quick_calc
+from scripts.lora_advisor import quick_recommend
+r = quick_analyze('examples/sample_data.jsonl')
+m = quick_calc('qwen2-7b')
+c = quick_recommend(r['length']['total_samples'], '7b', 'chat')
+print('OK')
+"
+```
+
+## License
 
 MIT
