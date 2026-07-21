@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|compact",
+        "command": "hooks/run-hook.sh session-start",
+        "async": false
+      }
+    ]
+  }
+}

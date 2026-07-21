@@ -1,8 +1,28 @@
 {
   "name": "lora-trainer",
-  "version": "2.3.0",
-  "description": "LoRA/QLoRA 大模型微调智能助手 — 数据分析、显存计算、参数推荐、训练脚本生成",
-  "author": "lusha",
-  "homepage": "https://github.com/lusha/lora-trainer",
-  "strict": false
+  "version": "2.4.0",
+  "description": "LoRA/QLoRA fine-tuning assistant — data analysis, VRAM estimation, hyperparameter recommendation, and training script generation. Supports 40+ models across 12 families.",
+  "author": {
+    "name": "LuVisage",
+    "url": "https://github.com/LuVisage"
+  },
+  "homepage": "https://github.com/LuVisage/lora-skills",
+  "repository": "https://github.com/LuVisage/lora-skills",
+  "license": "MIT",
+  "keywords": [
+    "lora",
+    "qlora",
+    "fine-tuning",
+    "llm",
+    "peft",
+    "model-training",
+    "deep-learning",
+    "ai"
+  ],
+  "strict": false,
+  "hooks": "hooks/hooks.json",
+  "marketplace": {
+    "category": "machine-learning",
+    "tags": ["lora", "fine-tuning", "training", "llm", "deep-learning"]
+  }
 }

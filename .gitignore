@@ -25,6 +25,9 @@ lora_skill_env/
 .DS_Store
 Thumbs.db
 
+# Claude Code local config
+.claude/
+
 # Design docs (keep only README)
 优化方案-基于行业最佳实践.md
 设计文档-版本对比.md
