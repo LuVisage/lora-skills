@@ -1,20 +1,26 @@
 ---
 name: lora:analyze
-description: 完整分析微调数据 — 数据诊断 + 显存计算 + LoRA 参数推荐 + 生成训练脚本
-argument-hint: <data-path> [--model <name>] [--task <type>] [--gpu <gb>]
+version: 2.1.0
+description: >-
+  Full LoRA fine-tuning pipeline: data audit → VRAM estimation → hyperparameter
+  recommendation → training script generation. Use when the user provides
+  training data and wants end-to-end analysis. Trigger: /lora:analyze,
+  "analyze my data", "帮我分析微调数据", "看看这个数据能不能微调".
+argument-hint: <data-path> [model] [task] [gpu-gb]
+disable-model-invocation: true
 allowed-tools: Read, Write, Bash(python *), Glob, Grep
 ---
 
-# /lora:analyze
+# /lora:analyze — 完整分析
 
-给你一条训练数据和一个模型名，帮你跑完整分析：数据质量 → 显存评估 → 参数推荐 → 生成脚本。
+数据 → 显存 → 参数 → 脚本，一步到位。
 
 ## 参数
 
-- `$1` — 数据路径 (JSONL)，必填
-- `$2` — 模型名（qwen2-7b / llama3-8b / ...），选填
-- `$3` — 任务类型（chat / code / math / roleplay），选填，默认 chat
-- `$4` — 显存 (GB)，选填，默认 24
+- `$ARGUMENTS[0]` — 数据路径 (JSONL)，必填
+- `$ARGUMENTS[1]` — 模型名（qwen2-7b / llama3-8b / ...），选填
+- `$ARGUMENTS[2]` — 任务类型（chat / code / math / roleplay），选填，默认 chat
+- `$ARGUMENTS[3]` — 显存 (GB)，选填，自动检测
 
 ## 示例
 
@@ -23,3 +29,7 @@ allowed-tools: Read, Write, Bash(python *), Glob, Grep
 /lora:analyze ./data/train.jsonl
 /lora:analyze ./data/train.jsonl --task code
 ```
+
+## 执行
+
+加载 lora-trainer skill，执行完整五步流程。参考 SKILL.md 中的示例了解输出格式。

@@ -1,17 +1,24 @@
 ---
 name: lora:check-data
-description: 快速检查微调数据质量 — 空回复、重复、长度分布、格式检测
+version: 2.1.0
+description: >-
+  Quick training data quality scan: sample count, length distribution, empty
+  responses, duplicates, format detection. No parameter recommendation or script
+  generation. Use when the user just wants to check data quality before deciding
+  whether to fine-tune. Trigger: /lora:check-data, "检查数据", "看看数据质量",
+  "check my data".
 argument-hint: <data-path>
+disable-model-invocation: true
 allowed-tools: Read, Bash(python *), Glob
 ---
 
-# /lora:check-data
+# /lora:check-data — 数据质量扫描
 
-看一眼数据质量。不做分析，不推荐参数，不生成脚本。
+只看数据质量，不做参数推荐，不生成脚本。适合在决定微调前快速摸底。
 
 ## 参数
 
-- `$1` — 数据路径 (JSONL)，必填
+- `$ARGUMENTS[0]` — 数据路径 (JSONL)，必填
 
 ## 示例
 
@@ -21,5 +28,12 @@ allowed-tools: Read, Bash(python *), Glob
 
 ## 输出
 
-会告诉你：多少条、什么格式、长度分布、有没有空回复、有没有重复。
-有问题会直接指出来，附带建议。
+- 样本总量、格式类型
+- 长度分布（min / avg / p95 / max）
+- 空回复数及占比（> 5% 红色警告）
+- 重复对数量（> 10% 红色警告）
+- 质量问题清单 + 修复建议
+
+## 执行
+
+加载 lora-trainer skill 的数据分析能力，但不执行 Step 3-5（显存、参数、脚本）。

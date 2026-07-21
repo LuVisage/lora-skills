@@ -1,14 +1,15 @@
 ---
 name: lora-trainer
+version: 2.1.0
 description: >-
-  This skill should be used when the user asks to "微调模型", "微调", "LoRA微调",
-  "lora微调", "QLoRA", "训练模型", "炼丹", "fine-tune", "fine tune", "SFT",
-  "instruction tuning", "指令微调", "adapter training", "PEFT", "参数高效微调",
-  "模型训练", "继续预训练", "对齐训练", mentions "lora", "lora", "adapter",
-  "模型参数", "显存不够", "batch size", "学习率", "过拟合", or discusses
-  model fine-tuning, GPU memory planning for LLM training, LoRA hyperparameter
-  selection, or asks how to train/adapt large language models on custom data.
+  LoRA / QLoRA fine-tuning assistant. Use when the user asks to "微调模型",
+  "fine-tune", "LoRA微调", "QLoRA", "训练模型", "炼丹", "SFT", "instruction
+  tuning", "指令微调", "adapter training", "PEFT", "参数高效微调", "模型训练",
+  "继续预训练", "对齐训练", "显存不够", or asks about LoRA hyperparameters
+  (rank, alpha, batch size, learning rate, epochs, dropout). Covers data audit,
+  VRAM estimation, parameter recommendation, and training script generation.
 allowed-tools: Read, Write, Bash(python *), Bash(pip *), Glob, Grep, WebSearch
+effort: high
 ---
 
 # LoRA 微调
@@ -26,6 +27,37 @@ allowed-tools: Read, Write, Bash(python *), Bash(pip *), Glob, Grep, WebSearch
 3. **每个推荐参数都给出理由。** 用户需要知道为什么 r=8 而不是 16，这影响他们后续自己调参的判断力。
 4. **生成脚本前向用户确认配置。** 列出所有关键参数的取值和理由，确认后再生成文件。
 5. **数据有问题时明确指出。** 空回复过多、重复率高、长度异常——先暴露问题，不要等训练失败再回头排查。
+
+---
+
+## ⚠️ 常见坑 (Gotchas)
+
+真实使用中高频踩坑记录。每一条都对应至少一次实际翻车。
+
+### 数据坑
+
+- **JSONL 不是每行一个合法 JSON。** 用户经常把格式化的 JSON（多行）当 JSONL 用。第一步先验证 `python -c "import json; [json.loads(l) for l in open('data.jsonl')]"`。
+- **instruction 和 output 列名不标准。** 常见别名：`prompt`/`completion`、`question`/`answer`、`input`/`target`、`text`/`summary`。不要假设字段名一定是 `instruction`/`output`。
+- **中英混合数据的 max_length 陷阱。** 中文字符在 tokenizer 里是 2-3 个 token，英文是 1 个。2000 个中文字 ≈ 4000-6000 tokens，可能截断重要内容。p95 长度建议 ×2 作为 max_seq_length 参考。
+- **角色扮演数据常带系统提示词。** `messages` 格式里有 `system` role 的话，这些 tokens 也参与训练但不产生 loss。样本量统计时要意识到这一点。
+
+### 显存坑
+
+- **nvidia-smi 显示的 "used" 不是全部可用显存。** 可能有其他进程占用。不要假设 24GB 显卡就有 24GB 可用——先跑 `nvidia-smi --query-gpu=memory.free --format=csv`。
+- **量化配置不生效。** 用户说 "QLoRA" 但实际用的配置里 `load_in_4bit=False`。生成脚本时必须在代码里显式确认 `BitsAndBytesConfig(load_in_4bit=True)`。
+- **gradient checkpointing 不是免费的。** 开启后显存减少 ~30%，但训练时间增加 ~20%。不要在显存充裕时推荐它。
+
+### 参数坑
+
+- **batch_size=1 时 gradient_accumulation=16 ≠ batch_size=16。** BatchNorm 等少数层的行为不同。不过 Transformer 架构下基本等价，可以忽略此差异。
+- **大 rank + 小数据 = 必过拟合。** 数据 < 500 条用 r=32 基本上就是背数据了。这不是建议，是数学规律。
+- **学习率不随 batch size 调整。** 有效 batch 翻倍时，lr 应该按 sqrt 比例调整。但 LoRA 场景下影响不大，不用主动提——除非用户自己改了 batch size。
+
+### 交互坑
+
+- **用户说 "帮我微调" 但没给数据文件。** 别猜。第一步就问：数据在哪？
+- **用户给了 .json 但其实是 .jsonl。** 手动检查文件内容。Python 一行一行验证比瞎猜可靠。
+- **生成完脚本用户直接跑，然后报错。** 脚本里 MODEL_NAME 和 DATA_PATH 必须用占位符或注释标记清楚，让用户一看就知道要改什么。
 
 ---
 
@@ -127,19 +159,7 @@ for k,v in mem.items():
 "
 ```
 
-快速参考值（QLoRA 4-bit, seq=2048, bs=4, r=8）：
-
-```
-Qwen2-7B        ~4.6 GB
-LLaMA3-8B       ~5.2 GB
-Mistral-7B      ~5.2 GB
-ChatGLM3-6B     ~4.2 GB
-LLaMA2-13B      ~8.5 GB
-Qwen2-72B       ~35 GB
-LLaMA3-70B      ~38 GB
-```
-
-近似估算：实际显存 ≈ 参考值 × (seq/2048) × (bs/4)。精确值必须用脚本计算。
+快速参考值见 `references/vram-reference.md`（QLoRA 4-bit, seq=2048, bs=4, r=8 下的常见模型显存占用）。
 
 ---
 
@@ -153,7 +173,7 @@ LLaMA3-70B      ~38 GB
 
 建议询问：
 - 任务类型（chat / code / math / roleplay，默认 chat）
-- GPU 显存大小（默认 24GB，可尝试用 `nvidia-smi` 检测）
+- GPU 显存大小。先尝试检测：`!nvidia-smi --query-gpu=memory.total --format=csv,noheader 2>/dev/null || echo "no-gpu"`，失败则问用户。
 
 ### Step 2: 分析数据
 
@@ -200,6 +220,61 @@ paths = builder.build_all()
 1. 编辑训练脚本中的 `MODEL_NAME` 和 `DATA_PATH`
 2. 安装依赖：`pip install -r requirements.txt`
 3. 运行训练：`python train_lora_xxx.py`
+
+---
+
+## 示例：完整流程
+
+下面展示一个典型交互的预期输出。用户输入：
+
+```
+/lora:analyze ./data/chat_train.jsonl qwen2-7b chat 16
+```
+
+### 你应该输出的内容
+
+**数据报告（Step 2 结果）：**
+```
+📊 数据诊断：chat_train.jsonl
+  - 样本总量：2,340 条
+  - 质量等级：✅ 良好
+  - 平均长度：342 tokens | P95：1,024 tokens | 最大：2,856 tokens
+  - 空回复：3 条 (0.1%) ✅
+  - 重复对：12 条 (0.5%) ✅
+  - 格式：instruction-output
+```
+
+**显存评估（Step 3 结果）：**
+```
+💾 显存估算：Qwen2-7B + QLoRA 4-bit
+  - 模型权重：3.5 GB | LoRA 参数：0.02 GB
+  - 激活值 (seq=1024, bs=4)：1.8 GB
+  - 优化器状态：0.3 GB | 系统开销：0.6 GB
+  - 总计：6.2 GB
+
+你的显卡：16 GB → 剩余 9.8 GB (61%) ✅ 安全
+可以开 bs=4, gradient_accumulation=4。
+```
+
+**参数推荐（Step 4 结果）：**
+```
+⚙️ 推荐配置：
+  rank=8         ← 2,340 条数据，常规区间，8 是安全选择
+  alpha=16       ← 标准 2×r，平衡学习强度
+  target_modules=[q_proj, v_proj]  ← 聊天任务，Q/V 足够了
+  dropout=0.05   ← 1k-10k 区间标准值
+  lr=2e-4        ← r=8 基准值，聊天任务不调整
+  epochs=3       ← 500-5k 区间，3 轮稳妥
+  batch_size=4   ← 16GB 显存对应配置
+  gradient_accumulation=4  ← 目标有效 batch=16
+```
+
+然后等待用户确认再生成脚本。
+
+**常见反馈的回应：**
+- 用户说 "rank 能不能大一点" → "可以调到 16，但 2,340 条数据用 16 风险不大。如果你想要更强效果可以试。"
+- 用户说 "学习率太高了吧" → "2e-4 是 LoRA 的行业基准。想保守的话可以降到 1e-4，但收敛会慢一些。"
+- 用户说 "就按这个来" → 调用 ScriptBuilder 生成文件，然后列出生成的文件路径和下一步操作。
 
 ---
 
@@ -254,14 +329,15 @@ paths = builder.build_all()
 
 ## 参考资料
 
-需要精确模型规格（hidden_dim、layers）时：
-**Read** `${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/references/model-catalog.md`
+四个参考文件，按需加载：
 
-需要快速套用预置配方时：
-**Read** `${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/references/recipes.md`
+- **model-catalog.md** — 精确模型规格（hidden_dim、layers、vocab）。显存计算前必须查。
+- **recipes.md** — 预置配方（chat/code/math/roleplay）。用户不想调参时直接套用。
+- **vram-reference.md** — 常见模型显存快速参考。给用户一个大致数字时用。
+- **faq.md** — 原理性问答。用户问"为什么 r=8"、"LoRA 和全量微调什么区别"时查。
 
-用户询问原理性"为什么"时：
-**Read** `${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/references/faq.md`
+加载方式：
+**Read** `${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/references/<文件名>`
 
 ---
 
