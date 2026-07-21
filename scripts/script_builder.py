@@ -86,10 +86,10 @@ class ScriptBuilder:
         modules_str = str(modules)
         format_fn_code = self._build_format_fn()
 
-        # 计算 warmup steps（总步数的 10%）
+        # 计算 warmup steps（总步数的 10%，但不超总步数-1）
         num_samples = self.config.get("num_samples", 1000)
-        total_steps = (num_samples // (bs * ga)) * epochs if bs * ga > 0 else 100
-        warmup = max(10, total_steps // 10)
+        total_steps = max(1, (num_samples // (bs * ga)) * epochs if bs * ga > 0 else 100)
+        warmup = min(max(10, total_steps // 10), max(1, total_steps - 1))
 
         script = f'''#!/usr/bin/env python
 # -*- coding: utf-8 -*-
@@ -172,14 +172,16 @@ training_args = TrainingArguments(
     warmup_steps={warmup},
     lr_scheduler_type="cosine",
     logging_steps=10,
-    save_steps=500,
-    eval_steps=500,
+    save_steps=min(500, max(50, total_steps // 5)),
+    eval_steps=min(500, max(50, total_steps // 5)),
     evaluation_strategy="steps" if os.path.exists(DATA_PATH.replace("train", "eval")) else "no",
     save_total_limit=3,
     load_best_model_at_end=True,
-    fp16=True,
+    bf16=True,  # Ampere+ GPU (RTX 30/40, A100) 推荐 bf16，更稳定；老 GPU 改 fp16=True
     gradient_checkpointing=True,
     optim="adamw_8bit",
+    neftune_noise_alpha=5,   # NEFTune: embedding 加噪，稳定提升 3-5%
+    max_grad_norm=1.0,        # 梯度裁剪，防止 loss spike
     report_to="none",
 )
 
@@ -271,13 +273,25 @@ print(f"   使用方式: model = PeftModel.from_pretrained(base_model, '{{adapte
 
     # ── 推理脚本 ────────────────────────────────────────────
 
+    def _build_inference_format_fn(self) -> str:
+        """根据训练数据格式生成对应的推理格式化代码。与训练时保持一致。"""
+        if self.data_format in ("messages", "conversations"):
+            return '''def format_prompt(prompt: str) -> str:
+    """构造 ChatML 格式 prompt（与训练时一致）。"""
+    return f"<|user|>\\n{prompt}\\n<|assistant|>\\n"'''
+        else:
+            return '''def format_prompt(prompt: str) -> str:
+    """构造 Instruction 格式 prompt（与训练时一致）。"""
+    return f"### Instruction:\\n{prompt}\\n\\n### Response:\\n"'''
+
     def build_inference_script(self) -> str:
         """生成 LoRA 模型推理脚本。"""
-        script = '''#!/usr/bin/env python
+        format_fn_code = self._build_inference_format_fn()
+        script = f'''#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 LoRA 模型推理脚本
-由 LoRA Skill 自动生成
+由 LoRA Skill 自动生成 — 训练数据格式: {self.data_format}
 """
 
 import torch
@@ -288,8 +302,8 @@ from peft import PeftModel
 # 配置 — 请修改为你的实际路径
 # ═══════════════════════════════════════════════
 
-BASE_MODEL = "{{model_path}}"     # 基座模型路径
-LORA_PATH = "{{lora_path}}"       # LoRA adapter 路径
+BASE_MODEL = "{{{{model_path}}}}"     # TODO: 基座模型路径
+LORA_PATH = "{{{{lora_path}}}}"       # TODO: LoRA adapter 路径
 
 
 def load_model():
@@ -312,9 +326,12 @@ def load_model():
     return model, tokenizer
 
 
+{format_fn_code}
+
+
 def chat(model, tokenizer, prompt: str, max_tokens: int = 512) -> str:
-    """生成回复。"""
-    formatted = f"### Instruction:\\n{prompt}\\n\\n### Response:\\n"
+    """生成回复。使用与微调时一致的 prompt 格式。"""
+    formatted = format_prompt(prompt)
     inputs = tokenizer(formatted, return_tensors="pt").to(model.device)
 
     with torch.no_grad():
@@ -328,9 +345,9 @@ def chat(model, tokenizer, prompt: str, max_tokens: int = 512) -> str:
         )
 
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    # 只取 Response 部分
-    if "### Response:" in response:
-        response = response.split("### Response:")[-1].strip()
+    # 去掉 prompt 部分，只保留模型输出
+    if formatted in response:
+        response = response[len(formatted):].strip()
     return response
 
 

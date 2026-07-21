@@ -60,3 +60,12 @@ A: 看 eval loss。如果 eval loss 不再下降（甚至上升）= 过拟合，
 
 ### Q: 训练完怎么用？
 A: 用 PeftModel 加载 adapter：`model = PeftModel.from_pretrained(base_model, "lora_path")`。推理时可以 merge_and_unload 提速。
+
+### Q: fp16 还是 bf16？
+A: RTX 30/40 系列、A100、H100 → bf16（更快更稳，不会炸 NaN）。老 GPU（V100、T4）→ fp16。不确定时用 fp16 更保险。
+
+### Q: loss 突然爆了怎么办？
+A: 1) 降低学习率 2) 确认 max_grad_norm=1.0 已设置 3) 检查数据中是否有超长/异常样本 4) 确认 bf16/fp16 没有溢出。
+
+### Q: target_modules 设了但训练效果没变化？
+A: 很可能模块名不匹配——`get_peft_model()` 找不到对应层会静默跳过。先 `print(model)` 确认实际的 attention 层名，确保 target_modules 里的名字完全一致。

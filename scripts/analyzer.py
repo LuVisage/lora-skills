@@ -27,32 +27,62 @@ class DataAnalyzer:
                     data.append(json.loads(line))
         return data
 
+    # ── Token 估算 ─────────────────────────────────────────
+
+    def _estimate_tokens(self, text: str) -> float:
+        """估算文本的 token 数量（不加载 tokenizer 的近似方法）。
+
+        中文/日/韩字符 ≈ 2.0 tokens/字（大多数 tokenizer 的行为）。
+        英文/数字 ≈ 0.28 tokens/字符（~3.5 字符/token）。
+        混合文本按字符分类加权估算。
+        """
+        if not text:
+            return 0.0
+
+        cjk_count = 0
+        other_count = 0
+        for ch in text:
+            if '一' <= ch <= '鿿' or '぀' <= ch <= 'ヿ' or '가' <= ch <= '힯':
+                cjk_count += 1
+            else:
+                other_count += 1
+
+        return cjk_count * 2.0 + other_count * 0.28
+
     # ── 长度分析 ───────────────────────────────────────────
 
     def analyze_length_distribution(self) -> Dict:
-        """分析 instruction + output 的总长度分布。"""
-        lengths = []
+        """分析 instruction + output 的字符长度和估算 token 长度分布。"""
+        char_lengths = []
+        token_lengths = []
         for item in self.data:
-            total_len = len(item.get("instruction", "")) + len(
-                item.get("output", "")
-            )
-            lengths.append(total_len)
+            instr = item.get("instruction", "")
+            out = item.get("output", "")
+            char_len = len(instr) + len(out)
+            char_lengths.append(char_len)
+            token_lengths.append(self._estimate_tokens(instr) + self._estimate_tokens(out))
 
-        if not lengths:
+        if not char_lengths:
             return {
                 "min": 0, "max": 0, "mean": 0, "median": 0,
                 "percentile_80": 0, "percentile_95": 0, "total_samples": 0,
+                "estimated_p95_tokens": 0,
             }
 
-        arr = np.array(lengths)
+        arr_char = np.array(char_lengths)
+        arr_token = np.array(token_lengths)
         return {
-            "min": int(np.min(arr)),
-            "max": int(np.max(arr)),
-            "mean": float(round(np.mean(arr), 1)),
-            "median": float(round(np.median(arr), 1)),
-            "percentile_80": int(np.percentile(arr, 80)),
-            "percentile_95": int(np.percentile(arr, 95)),
-            "total_samples": len(arr),
+            "min": int(np.min(arr_char)),
+            "max": int(np.max(arr_char)),
+            "mean": float(round(np.mean(arr_char), 1)),
+            "median": float(round(np.median(arr_char), 1)),
+            "percentile_80": int(np.percentile(arr_char, 80)),
+            "percentile_95": int(np.percentile(arr_char, 95)),
+            "total_samples": len(arr_char),
+            # token 估算值（用于 max_seq_length 推荐）
+            "estimated_p95_tokens": int(np.percentile(arr_token, 95)),
+            "estimated_median_tokens": float(round(np.median(arr_token), 1)),
+            "note": "token 数为基于字符类型的近似估算，精确值需用 tokenizer 计算",
         }
 
     # ── 质量检查 ───────────────────────────────────────────
@@ -157,13 +187,15 @@ class DataAnalyzer:
             f"数据格式: {fmt['format']}",
             f"字段: {', '.join(fmt['fields'])}",
             "",
-            "📏 长度统计 (instruction + output):",
-            f"  最短: {length_stats['min']} 字符",
-            f"  最长: {length_stats['max']} 字符",
-            f"  平均: {length_stats['mean']} 字符",
-            f"  中位数: {length_stats['median']} 字符",
-            f"  80% 分位: {length_stats['percentile_80']} 字符",
-            f"  95% 分位: {length_stats['percentile_95']} 字符",
+            "📏 字符长度 (instruction + output):",
+            f"  最短: {length_stats['min']} | 最长: {length_stats['max']}",
+            f"  平均: {length_stats['mean']} | 中位数: {length_stats['median']}",
+            f"  P80: {length_stats['percentile_80']} | P95: {length_stats['percentile_95']}",
+            "",
+            "📐 估算 Token 长度 (基于字符类型近似):",
+            f"  中位数: {length_stats['estimated_median_tokens']} tokens",
+            f"  P95: {length_stats['estimated_p95_tokens']} tokens",
+            f"  建议 max_seq_length ≥ {length_stats['estimated_p95_tokens']} (P95 × 1.0)",
             "",
             "🔍 质量检查:",
             f"  空回复比例: {quality_stats['empty_output_ratio'] * 100:.1f}%",
