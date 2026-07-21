@@ -155,7 +155,7 @@ LORA_CONFIG = LoraConfig(
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.float16,
+    bnb_4bit_compute_dtype=torch.bfloat16,  # 与 bf16 训练一致，避免 dtype cast 损耗
     bnb_4bit_use_double_quant=True,
 )
 
@@ -195,6 +195,7 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb_config,
     device_map="auto",
     trust_remote_code=True,
+    attn_implementation="flash_attention_2",  # 2-3× 加速，20-30% 省显存 (Ampere+)
 )
 
 tokenizer = AutoTokenizer.from_pretrained(
@@ -369,7 +370,7 @@ if __name__ == "__main__":
     def build_config_yaml(self) -> str:
         """生成 YAML 配置文件。"""
         config_dict = {
-            "skill_version": "1.0.0",
+            "skill_version": "2.2.1",
             "generated_at": self.timestamp,
             "lora_config": {
                 "r": self.config["rank"]["value"],

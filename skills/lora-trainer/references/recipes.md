@@ -51,10 +51,19 @@ r=8, alpha=32, modules=[v_proj], dropout=0.05, lr=3e-4, epochs=3
 ## 继续预训练 (CPT)
 
 ```
-r=16-64, alpha=2×r, modules=[q,k,v,o,up,down,gate], dropout=0.05, lr=5e-5~1e-4, epochs=1-2
+r=16-64, alpha=2×r, modules=[q,k,v,o,up,down,gate], dropout=0.05, lr=5e-5~1e-4, epochs=1-3
+数据格式: JSONL 每行 {"text": "..."}，纯文本无需 instruction 模板
+有效 batch: 32-64（CPT 需要大 batch 稳定训练）
+强烈建议开启 packing（短文本拼接成长序列）
 ```
 
-适用：领域知识注入（医疗、法律、金融等垂直领域）。需纯文本格式。
+适用：领域知识注入（医疗、法律、金融等垂直领域）。
+
+CPT vs SFT 关键差异：
+- 不需要 instruction 模板，直接训练原始文本
+- rank 更高（知识注入需要更强容量）
+- lr 更低（保守更新，避免破坏预训练知识）
+- 建议数据量 > 10M tokens
 
 ## DoRA（推荐）
 
