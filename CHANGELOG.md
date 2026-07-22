@@ -6,7 +6,14 @@ All notable changes to lora-trainer.
 
 ### Added
 
-- **Quick Start section** in SKILL.md — prominent copy-paste examples for all three commands, natural language invocation patterns, zero-barrier entry for new users
+- **Executable Python scripts** in `skills/lora-trainer/scripts/` — addressing "only docs, no code" feedback
+  - `train_qlora.py` — Complete QLoRA training script (change 2 lines, run)
+  - `inference.py` — LoRA model inference (interactive / single / batch)
+  - `check_env.py` — One-click environment check (CUDA, PyTorch, deps, GPU, mirror)
+- **`TRIGGERS.md`** — Exhaustive invocation catalog (slash commands + natural language, CN + EN)
+- **`/lora:setup` command** — Environment check + dependency installation
+- **Code snippets** for DoRA, LoRA+, NEFTune in SKILL.md — complete `LoraConfig(...)` examples, not just descriptions
+- **Quick Start section** in SKILL.md — prominent copy-paste examples
 - **Domestic mirror guide** (🇨🇳 国内用户模型下载加速) — hf-mirror.com, ModelScope, and manual download methods for Chinese users
 - **Principle #6: 能动手就不动嘴** — agent proactively runs analysis/VRAM/script generation instead of telling users to run commands themselves
 - **`/lora:debug` command** — post-training failure diagnosis from logs, error messages, or symptoms. Matches error signatures → solutions
