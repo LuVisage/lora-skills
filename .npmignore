@@ -30,6 +30,12 @@ Thumbs.db
 设计文档-版本对比.md
 📦 项目整体架构.md
 
+# Docs / blog
+docs/
+
+# Other projects
+huggingface-space/
+
 # Git
 .git/
 .gitignore

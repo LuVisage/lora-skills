@@ -132,35 +132,37 @@ Qwen2 (0.5B–72B)、Qwen2.5 (0.5B–72B)、LLaMA3 (8B–70B)、LLaMA3.1/3.2 (1B
 
 ```
 lora-trainer/
-├── cli/                          # 🆕 独立 CLI（pip install 入口）
-│   ├── main.py                   # CLI 主入口
+├── .claude-plugin/                # Claude Code 插件清单
+│   └── plugin.json
+├── skills/lora-trainer/           # 🔥 核心技能（AI Agent 大脑）
+│   ├── SKILL.md                   # 全部推荐规则
+│   └── references/                # 纯数据，按需加载
+│       ├── model-catalog.md       # 模型规格（40+）
+│       ├── recipes.md             # 预设配置方案
+│       ├── vram-reference.md      # 显存快速查询表
+│       └── faq.md                 # 常见问题
+├── commands/                      # 斜杠命令定义（4 个）
+│   ├── analyze.md                 # /lora:analyze
+│   ├── cook.md                    # /lora:cook
+│   ├── check-data.md              # /lora:check-data
+│   └── debug.md                   # /lora:debug（新增）
+├── agents/                        # 子 Agent 定义（3 个）
+├── hooks/                         # 会话生命周期钩子
+├── cli/                           # 独立 CLI（pip install 入口）
+│   ├── main.py
 │   └── commands/
-│       ├── analyze.py            # lora-trainer analyze
-│       ├── recommend.py          # lora-trainer recommend
-│       ├── memory.py             # lora-trainer memory
-│       ├── cook.py               # lora-trainer cook
-│       └── evaluate.py           # lora-trainer evaluate
-├── scripts/                      # Python 计算层
-│   ├── analyzer.py               # 数据统计 & 质量检查
-│   ├── memory_calc.py            # 显存估算（40+ 模型库）
-│   ├── lora_advisor.py           # 参数推荐引擎
-│   ├── script_builder.py         # 训练/推理脚本生成
-│   └── evaluator.py              # 模型评估 & 效果对比
-├── skills/lora-trainer/          # Claude Code 技能（AI Agent 层）
-│   ├── SKILL.md                  # 全部推荐规则（~522 行）
-│   └── references/               # 纯数据，按需加载
-│       ├── model-catalog.md      # 模型规格（40+）
-│       ├── recipes.md            # 预设配置方案
-│       ├── vram-reference.md     # 显存快速查询表
-│       └── faq.md                # 常见问题
-├── agents/                       # 子 Agent 定义
-├── commands/                     # 斜杠命令定义
-├── .claude-plugin/               # Claude Code 插件清单
-├── examples/                     # 示例 JSONL 训练数据
-├── templates/                    # 代码模板
-├── pyproject.toml                # Python 包配置
-├── package.json                  # npm 包配置
-└── requirements.txt              # Python 依赖
+├── scripts/                       # Python 计算层
+│   ├── analyzer.py
+│   ├── memory_calc.py
+│   ├── lora_advisor.py
+│   ├── script_builder.py
+│   └── evaluator.py
+├── templates/                     # 训练脚本模板
+├── examples/                      # 示例 JSONL 训练数据
+├── docs/                          # 博客文章 & 文档
+├── pyproject.toml                 # Python 包配置
+├── package.json                   # npm 包配置
+└── requirements.txt               # Python 依赖
 ```
 
 ## 设计理念

@@ -135,35 +135,37 @@ Missing a model? Add one line to `references/model-catalog.md` or directly to th
 
 ```
 lora-trainer/
-├── cli/                          # NEW: Standalone CLI (pip install)
-│   ├── main.py                   # Entry point, CLI group
+├── .claude-plugin/                # Claude Code plugin manifest
+│   └── plugin.json
+├── skills/lora-trainer/           # 🔥 Core skill (AI agent brain)
+│   ├── SKILL.md                   # All recommendation rules
+│   └── references/                # Pure data, loaded on demand
+│       ├── model-catalog.md       # Model specs (40+)
+│       ├── recipes.md             # Preset configurations
+│       ├── vram-reference.md      # Quick VRAM lookup table
+│       └── faq.md                 # Frequently asked questions
+├── commands/                      # Slash command definitions (4)
+│   ├── analyze.md                 # /lora:analyze
+│   ├── cook.md                    # /lora:cook
+│   ├── check-data.md              # /lora:check-data
+│   └── debug.md                   # /lora:debug (NEW)
+├── agents/                        # Sub-agent definitions (3)
+├── hooks/                         # Session lifecycle hooks
+├── cli/                           # Standalone CLI (pip install)
+│   ├── main.py
 │   └── commands/
-│       ├── analyze.py            # lora-trainer analyze
-│       ├── recommend.py          # lora-trainer recommend
-│       ├── memory.py             # lora-trainer memory
-│       ├── cook.py               # lora-trainer cook
-│       └── evaluate.py           # lora-trainer evaluate
-├── scripts/                      # Python computation layer
-│   ├── analyzer.py               # Data statistics & quality checks
-│   ├── memory_calc.py            # VRAM estimation (40+ model DB)
-│   ├── lora_advisor.py           # Parameter recommendation engine
-│   ├── script_builder.py         # Training/inference script generator
-│   └── evaluator.py              # Model evaluation & comparison
-├── skills/lora-trainer/          # Claude Code skill (AI agent)
-│   ├── SKILL.md                  # All recommendation rules (~522 lines)
-│   └── references/               # Pure data, loaded on demand
-│       ├── model-catalog.md      # Model specs (40+)
-│       ├── recipes.md            # Preset configurations
-│       ├── vram-reference.md     # Quick VRAM lookup table
-│       └── faq.md                # Frequently asked questions
-├── agents/                       # Sub-agent definitions
-├── commands/                     # Slash command definitions
-├── .claude-plugin/               # Claude Code plugin manifest
-├── examples/                     # Sample JSONL training data
-├── templates/                    # Code template stubs
-├── pyproject.toml                # Python package config
-├── package.json                  # npm package config
-└── requirements.txt              # Python dependencies
+├── scripts/                       # Python computation layer
+│   ├── analyzer.py
+│   ├── memory_calc.py
+│   ├── lora_advisor.py
+│   ├── script_builder.py
+│   └── evaluator.py
+├── templates/                     # Training script templates
+├── examples/                      # Sample JSONL training data
+├── docs/                          # Blog posts & articles
+├── pyproject.toml                 # Python package config
+├── package.json                   # npm package config
+└── requirements.txt               # Python dependencies
 ```
 
 ## Design
