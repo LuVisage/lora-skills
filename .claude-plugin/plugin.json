@@ -1,6 +1,6 @@
 {
   "name": "lora-trainer",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "LoRA/QLoRA fine-tuning assistant — data analysis, VRAM estimation, hyperparameter recommendation, and training script generation. Supports 40+ models across 13 families. Works as a standalone CLI (pip install lora-trainer) and AI agent skill.",
   "author": {
     "name": "LuVisage",

@@ -1,6 +1,6 @@
 ---
 name: lora:analyze
-version: 2.1.0
+version: 2.5.0
 description: >-
   Full LoRA fine-tuning pipeline: data audit → VRAM estimation → hyperparameter
   recommendation → training script generation. Use when the user provides
@@ -25,9 +25,21 @@ allowed-tools: Read, Write, Bash(python *), Glob, Grep
 ## 示例
 
 ```
+# 完整分析：数据 + 显存 + 参数 + 脚本
 /lora:analyze ./data/train.jsonl qwen2-7b chat 24
+
+# 只给数据，其他我来猜
 /lora:analyze ./data/train.jsonl
-/lora:analyze ./data/train.jsonl --task code
+
+# 指定任务类型
+/lora:analyze ./data/code.jsonl deepseek-7b code
+
+# 角色扮演数据
+/lora:analyze ./data/rp.jsonl llama3-8b roleplay
+
+# 自然语言也行
+"帮我分析 ./data/train.jsonl，用 qwen2-7b 做聊天微调"
+"看看这个数据适不适合微调 ./data/chat.jsonl"
 ```
 
 ## 执行

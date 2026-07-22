@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lora-trainer"
-version = "2.4.0"
+version = "2.5.0"
 description = "LoRA/QLoRA fine-tuning assistant — data analysis, VRAM estimation, hyperparameter recommendation, and training script generation. Standalone CLI + Claude Code / Cursor / Codex skill."
 readme = "README.md"
 license = {text = "MIT"}

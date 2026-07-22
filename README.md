@@ -42,6 +42,8 @@ Then:
 
 ```
 /lora:analyze ./data/train.jsonl qwen2-7b chat
+/lora:cook ./data/train.jsonl qwen2-7b chat --auto
+/lora:debug ./output/logs               # diagnose training failures
 ```
 
 ## Install
@@ -108,6 +110,7 @@ lora-trainer evaluate ./data/test.jsonl --format messages
 - **Script generation** — produces a complete QLoRA training script (Transformers + PEFT + BitsAndBytes + flash_attention_2), an inference script, and a YAML config; just fill in your model name and data path
 - **Evaluation** — generates side-by-side comparison scripts (base model vs LoRA) for post-training assessment
 - **Chinese-first UX** — all output in Chinese with emoji, designed for non-technical users; `--json` flag available for programmatic use
+- **Training diagnostics** — `/lora:debug` slash command for post-training failure analysis; matches error signatures to concrete fixes
 
 ## When to Use
 

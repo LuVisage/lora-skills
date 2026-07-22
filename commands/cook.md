@@ -1,6 +1,6 @@
 ---
 name: lora:cook
-version: 2.1.0
+version: 2.5.0
 description: >-
   Streamlined LoRA fine-tuning: same pipeline as analyze but concise output.
   Optional --auto flag starts training after confirmation. Use when the user
@@ -25,8 +25,21 @@ allowed-tools: Read, Write, Bash(python *), Glob, Grep
 ## 示例
 
 ```
+# 快速炼丹：精简输出
 /lora:cook ./data/train.jsonl qwen2-7b chat
-/lora:cook ./data/train.jsonl --auto
+
+# 自动模式：确认后直接开练
+/lora:cook ./data/train.jsonl qwen2-7b chat --auto
+
+# 只给数据
+/lora:cook ./data/train.jsonl
+
+# 代码任务
+/lora:cook ./data/code.jsonl deepseek-7b code
+
+# 自然语言
+"一键微调 ./data/train.jsonl，用 qwen2-7b"
+"帮我炼丹，数据在 ./data/chat.jsonl"
 ```
 
 ## 执行

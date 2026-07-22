@@ -2,6 +2,25 @@
 
 All notable changes to lora-trainer.
 
+## [2.5.0] — 2026-07-22
+
+### Added
+
+- **Quick Start section** in SKILL.md — prominent copy-paste examples for all three commands, natural language invocation patterns, zero-barrier entry for new users
+- **Domestic mirror guide** (🇨🇳 国内用户模型下载加速) — hf-mirror.com, ModelScope, and manual download methods for Chinese users
+- **Principle #6: 能动手就不动嘴** — agent proactively runs analysis/VRAM/script generation instead of telling users to run commands themselves
+- **`/lora:debug` command** — post-training failure diagnosis from logs, error messages, or symptoms. Matches error signatures → solutions
+- **Step 0: Startup check** — version verification and environment probing at each interaction start
+- **Step 5.5: Runtime support** — explicit post-generation follow-up flow; agent commits to helping with OOM, loss issues, bad results after training
+- **Enhanced troubleshooting** — expanded from 6 rows to 17 rows across three tables (environment checks, error messages, training quality). Each entry has specific diagnostic commands and prioritized fixes
+- **FAQ additions** — checkpoint recovery, training monitoring via tensorboard, domestic model download guide
+
+### Changed
+
+- **Five principles → Six principles** — added "能动手就不动嘴" principle
+- **Command files** (analyze/cook/check-data) now include richer invocation examples with natural language variants
+- **Troubleshooting table** restructured into three categories: pre-training checks, error messages, and training quality issues
+
 ## [2.4.0] — 2026-07-21
 
 ### Added

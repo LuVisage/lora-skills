@@ -1,6 +1,6 @@
 ---
 name: lora:check-data
-version: 2.1.0
+version: 2.5.0
 description: >-
   Quick training data quality scan: sample count, length distribution, empty
   responses, duplicates, format detection. No parameter recommendation or script
@@ -23,7 +23,13 @@ allowed-tools: Read, Bash(python *), Glob
 ## 示例
 
 ```
+# 检查数据质量（最常用）
 /lora:check-data ./data/train.jsonl
+
+# 自然语言也行
+"检查一下 ./data/train.jsonl 的数据质量"
+"看看这个数据能不能用来微调 ./data/chat.jsonl"
+"帮我扫一下 ./data/code.jsonl 有没有空回复和重复"
 ```
 
 ## 输出
