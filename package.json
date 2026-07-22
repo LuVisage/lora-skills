@@ -1,7 +1,7 @@
 {
   "name": "lora-trainer",
   "version": "2.4.0",
-  "description": "LoRA/QLoRA fine-tuning assistant for Claude Code — data analysis, memory planning, hyperparameter recommendation, and training script generation",
+  "description": "LoRA/QLoRA fine-tuning assistant — data analysis, VRAM estimation, hyperparameter recommendation, and training script generation. Standalone CLI + Claude Code / Cursor / Codex skill. Supports 40+ models across 12 families.",
   "keywords": [
     "claude-code",
     "claude-code-plugin",

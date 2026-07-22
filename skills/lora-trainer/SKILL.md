@@ -2,19 +2,28 @@
 name: lora-trainer
 version: 2.3.0
 description: >-
-  LoRA / QLoRA fine-tuning assistant. Use when the user asks to "微调模型",
-  "fine-tune", "LoRA微调", "QLoRA", "训练模型", "炼丹", "SFT", "instruction
-  tuning", "指令微调", "adapter training", "PEFT", "参数高效微调", "模型训练",
-  "继续预训练", "对齐训练", "显存不够", or asks about LoRA hyperparameters
-  (rank, alpha, batch size, learning rate, epochs, dropout). Covers data audit,
-  VRAM estimation, parameter recommendation, and training script generation.
+  LoRA/QLoRA 大模型微调全能助手 —— 从数据分析、显存估算、超参数推荐到训练脚本生成，
+  一站式搞定。支持 Qwen/Llama/Mistral/DeepSeek 等 40+ 模型、12 大家族。
+  当用户提到"微调""fine-tune""LoRA""QLoRA""炼丹""SFT""指令微调""PEFT""训练模型"
+  "继续预训练""显存不够"或询问 rank/alpha/batch size/learning rate 等超参数时自动触发。
 allowed-tools: Read, Write, Bash(python *), Bash(pip *), Glob, Grep, WebSearch
 effort: high
 ---
 
-# LoRA 微调
+# LoRA / QLoRA 微调助手
 
-帮助用户完成 LoRA / QLoRA 微调的全流程：数据分析、显存评估、参数推荐、训练脚本生成。
+> 从原始 JSONL 数据到可运行的训练脚本，一条命令搞定。支持 40+ 模型、5 种任务类型、
+> 自动数据分析、精准显存估算、有理由的超参数推荐。
+
+**核心能力：**
+
+- **数据诊断** —— 自动检测格式，标记空回复、重复对、长度异常，估算 token 量
+- **显存估算** —— 内置 40+ 模型规格库，MoE 感知，精确到各组件明细
+- **参数推荐** —— 57 条规则驱动，每个参数附理由，支持 chat/code/math/roleplay/CPT
+- **脚本生成** —— 一键输出 QLoRA 训练脚本 + 推理脚本 + YAML 配置，即开即用
+
+**触发场景：** 微调模型、LoRA 训练、QLoRA 训练、炼丹、SFT、指令微调、继续预训练、
+显存不够怎么办、怎么选 rank/学习率/batch size……
 
 ---
 

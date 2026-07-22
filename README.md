@@ -11,15 +11,15 @@
 
 # lora-trainer
 
-> LoRA / QLoRA fine-tuning CLI and AI agent skill — from raw data to a runnable training script.
+> Analyze data, plan VRAM, get hyperparameter recommendations with reasoning, and generate a runnable training script — all in one command. Works as a standalone CLI and as an AI agent skill for Claude Code, Cursor, and Codex.
 
 **English** | [简体中文](README.zh-CN.md)
 
 ## Why?
 
-Fine-tuning a large language model with LoRA shouldn't require reading five blog posts, calculating VRAM in a spreadsheet, and copy-pasting training snippets from a 2023 Colab notebook. But today it does.
+Fine-tuning an LLM with LoRA is powerful but full of hidden pitfalls: guessing VRAM leads to OOM errors, picking hyperparameters by trial and error wastes GPU hours, and stitching together training scripts from outdated tutorials introduces silent bugs.
 
-**lora-trainer** is both a **standalone CLI tool** (`pip install lora-trainer`) and a **Claude Code plugin**. It analyzes your data, calculates exact memory requirements against a catalog of 40+ model specs, recommends hyperparameters with reasoning, and generates a complete, runnable training script.
+**lora-trainer** removes the guesswork. It is both a **standalone CLI tool** (`pip install lora-trainer`) and a **Claude Code / Cursor / Codex plugin**. Point it at your JSONL data and it handles everything: automatic format detection, exact VRAM calculation against a catalog of 40+ model specs, hyperparameter recommendations with reasoning, and a complete, runnable training script.
 
 ## Quick Start
 
@@ -102,13 +102,25 @@ lora-trainer evaluate ./data/test.jsonl --format messages
 
 ## Features
 
-- **Data audit** — detects format (instruction-output, messages, conversations), flags empty responses, duplicates, control characters, length outliers, and bilingual ratio
-- **VRAM calculator** — built-in spec catalog for 40+ models (Qwen2/2.5, LLaMA2/3/3.1/3.2, Mistral, Mixtral, ChatGLM, DeepSeek, Yi, Baichuan2, Phi-3, Gemma, InternLM2); MoE-aware; estimates model weights, activations, optimizer states, and overhead
-- **Hyperparameter recommendation** — rank, alpha, target modules, dropout, learning rate, epochs, batch size, gradient accumulation; every value comes with a reason; task-aware (chat/code/math/roleplay/CPT)
-- **Script generation** — produces a complete QLoRA training script (Transformers + PEFT + BitsAndBytes + flash_attention_2), an inference script, and a YAML config
-- **Evaluation** — generates side-by-side comparison scripts (base model vs LoRA)
-- **Chinese-first UX** — all output in Chinese with emoji, designed for non-technical users
-- **Built-in knowledge** — 57 parameter rules in SKILL.md; Python scripts handle only exact numeric computation; all reference data in `references/`
+- **Data audit** — auto-detects JSONL format (instruction-output, messages, conversations), flags empty responses, duplicates, control characters, length outliers, and bilingual ratio
+- **VRAM calculator** — built-in spec catalog covering 40+ models across 12 families (Qwen2/2.5, LLaMA2/3/3.1/3.2, Mistral, Mixtral, ChatGLM, DeepSeek, Yi, Baichuan2, Phi-3, Gemma, InternLM2); MoE-aware; breaks down model weights, activations, optimizer states, and overhead
+- **Hyperparameter recommendation** — rank, alpha, target modules, dropout, learning rate, epochs, batch size, gradient accumulation; every value comes with a reason; task-aware across chat, code, math, roleplay, and CPT
+- **Script generation** — produces a complete QLoRA training script (Transformers + PEFT + BitsAndBytes + flash_attention_2), an inference script, and a YAML config; just fill in your model name and data path
+- **Evaluation** — generates side-by-side comparison scripts (base model vs LoRA) for post-training assessment
+- **Chinese-first UX** — all output in Chinese with emoji, designed for non-technical users; `--json` flag available for programmatic use
+
+## When to Use
+
+Use lora-trainer when you:
+
+- Want to fine-tune a model but don't know which hyperparameters to pick
+- Need to know if your GPU has enough VRAM *before* starting training
+- Have a JSONL dataset and want a quality check before training
+- Want the fastest path from raw data to a running training script
+- Are doing SFT, CPT (continued pre-training), or domain adaptation with LoRA/QLoRA
+- Need to evaluate whether fine-tuning actually improved your model
+
+Works with any NVIDIA GPU (8 GB+ recommended for 7B models with QLoRA).
 
 ## Supported Models
 

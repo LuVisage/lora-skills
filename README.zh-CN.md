@@ -11,15 +11,15 @@
 
 # lora-trainer
 
-> LoRA / QLoRA 大模型微调工具 — 独立 CLI + AI Agent 技能。一行命令，从原始数据到可运行的训练脚本。
+> 数据分析、显存规划、有理有据的超参数推荐、可运行的训练脚本 — 一条命令全搞定。独立 CLI 工具，也是 Claude Code / Cursor / Codex 的 AI Agent 技能。
 
 [English](README.md) | **简体中文**
 
 ## 为什么你需要这个工具？
 
-用 LoRA 微调大语言模型，不应该需要读五篇博客、手动算显存、然后从 2023 年的 Colab 笔记里复制粘贴训练代码。但现状就是这样。
+用 LoRA 微调大模型看似简单，坑却很多：显存拍脑袋估算，一跑就 OOM；超参数靠猜，GPU 小时白白浪费；从过时的教程拼凑训练脚本，引入各种隐蔽 bug。
 
-**lora-trainer** 既是**独立 CLI 工具**（`pip install lora-trainer`），也是 **Claude Code 插件**。它会分析你的数据，结合 40+ 模型的精确规格计算显存需求，给出有理有据的超参数建议，然后生成一份可以直接运行的完整训练脚本。
+**lora-trainer** 帮你避开这些坑。它既是**独立 CLI 工具**（`pip install lora-trainer`），也是 **Claude Code / Cursor / Codex 插件**。给它 JSONL 数据，剩下的全自动：格式检测、基于 40+ 模型规格库的精准显存计算、带理由的超参数推荐、以及一份可直接运行的训练脚本。
 
 ## 快速开始
 
@@ -102,13 +102,25 @@ lora-trainer evaluate ./data/test.jsonl --format messages
 
 ## 功能
 
-- **数据诊断** — 自动识别格式（instruction-output / messages / conversations），标记空响应、重复、控制字符、长度异常值和中英混合比例
-- **显存计算器** — 内置 40+ 模型规格库（Qwen2/2.5、LLaMA2/3/3.1/3.2、Mistral、Mixtral、ChatGLM、DeepSeek、Yi、Baichuan2、Phi-3、Gemma、InternLM2），MoE 感知，精确估算模型权重、激活值、优化器状态和额外开销
+- **数据诊断** — 自动识别 JSONL 格式（instruction-output / messages / conversations），标记空回复、重复对、控制字符、长度异常值和中英混合比例
+- **显存计算器** — 内置 40+ 模型、12 大家族的规格库（Qwen2/2.5、LLaMA2/3/3.1/3.2、Mistral、Mixtral、ChatGLM、DeepSeek、Yi、Baichuan2、Phi-3、Gemma、InternLM2），MoE 感知，精确估算模型权重、激活值、优化器状态和额外开销
 - **超参数推荐** — rank、alpha、target modules、dropout、learning rate、epochs、batch size、gradient accumulation，每个值都附带推荐理由；任务感知（chat/code/math/roleplay/CPT）
-- **脚本生成** — 直接输出完整 QLoRA 训练脚本（Transformers + PEFT + BitsAndBytes + flash_attention_2）、推理脚本和 YAML 配置文件
+- **脚本生成** — 直接输出完整 QLoRA 训练脚本（Transformers + PEFT + BitsAndBytes + flash_attention_2）、推理脚本和 YAML 配置文件；只需填入模型名和数据路径即可运行
 - **模型评估** — 生成基座模型 vs LoRA 模型的对比评估脚本
-- **中文优先** — 全中文界面 + emoji，面向非技术用户
-- **内置知识库** — SKILL.md 内置 57 条参数规则；Python 脚本只做精确数值计算；参考数据按需加载
+- **中文优先** — 全中文界面 + emoji，面向非技术用户；同时支持 `--json` 参数导出机器可读输出
+
+## 适用场景
+
+lora-trainer 适用于以下情况：
+
+- 想微调模型但不确定该选什么超参数
+- 想在训练前确认显存是否够用（而不是跑起来才发现 OOM）
+- 有一份 JSONL 数据集，想在训练前做质量检查
+- 想以最快速度从原始数据到可运行的训练脚本
+- 正在做 SFT、CPT（继续预训练）或领域适配
+- 需要评估微调是否真的提升了模型效果
+
+支持任意 NVIDIA GPU（7B 模型 QLoRA 微调建议 8 GB 以上显存）。
 
 ## 支持模型
 
