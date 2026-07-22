@@ -103,7 +103,7 @@ lora-trainer evaluate ./data/test.jsonl --format messages
 ## 功能
 
 - **数据诊断** — 自动识别 JSONL 格式（instruction-output / messages / conversations），标记空回复、重复对、控制字符、长度异常值和中英混合比例
-- **显存计算器** — 内置 40+ 模型、12 大家族的规格库（Qwen2/2.5、LLaMA2/3/3.1/3.2、Mistral、Mixtral、ChatGLM、DeepSeek、Yi、Baichuan2、Phi-3、Gemma、InternLM2），MoE 感知，精确估算模型权重、激活值、优化器状态和额外开销
+- **显存计算器** — 内置 40+ 模型、13 大家族的规格库（Qwen2/2.5、LLaMA2/3/3.1/3.2、Mistral、Mixtral、ChatGLM、DeepSeek、Yi、Baichuan2、Phi-3、Gemma、InternLM2），MoE 感知，精确估算模型权重、激活值、优化器状态和额外开销
 - **超参数推荐** — rank、alpha、target modules、dropout、learning rate、epochs、batch size、gradient accumulation，每个值都附带推荐理由；任务感知（chat/code/math/roleplay/CPT）
 - **脚本生成** — 直接输出完整 QLoRA 训练脚本（Transformers + PEFT + BitsAndBytes + flash_attention_2）、推理脚本和 YAML 配置文件；只需填入模型名和数据路径即可运行
 - **模型评估** — 生成基座模型 vs LoRA 模型的对比评估脚本
@@ -117,7 +117,7 @@ lora-trainer 适用于以下情况：
 - 想在训练前确认显存是否够用（而不是跑起来才发现 OOM）
 - 有一份 JSONL 数据集，想在训练前做质量检查
 - 想以最快速度从原始数据到可运行的训练脚本
-- 正在做 SFT、CPT（继续预训练）或领域适配
+- 正在做 SFT、CPT（继续预训练）或 LoRA/QLoRA 领域适配
 - 需要评估微调是否真的提升了模型效果
 
 支持任意 NVIDIA GPU（7B 模型 QLoRA 微调建议 8 GB 以上显存）。

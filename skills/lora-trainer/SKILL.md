@@ -1,11 +1,7 @@
 ---
 name: lora-trainer
-version: 2.3.0
-description: >-
-  LoRA/QLoRA 大模型微调全能助手 —— 从数据分析、显存估算、超参数推荐到训练脚本生成，
-  一站式搞定。支持 Qwen/Llama/Mistral/DeepSeek 等 40+ 模型、12 大家族。
-  当用户提到"微调""fine-tune""LoRA""QLoRA""炼丹""SFT""指令微调""PEFT""训练模型"
-  "继续预训练""显存不够"或询问 rank/alpha/batch size/learning rate 等超参数时自动触发。
+version: 2.4.0
+description: LoRA/QLoRA 大模型微调全能助手 —— 从数据分析、显存估算、超参数推荐到训练脚本生成，一站式搞定。支持 Qwen/Llama/Mistral/DeepSeek 等 40+ 模型、13 大家族。当用户提到"微调""fine-tune""LoRA""QLoRA""炼丹""SFT""instruction tuning""指令微调""adapter training""PEFT""参数高效微调""对齐训练""训练模型""继续预训练""显存不够"或询问 rank/alpha/batch size/learning rate/epochs/dropout 等超参数时自动触发。
 allowed-tools: Read, Write, Bash(python *), Bash(pip *), Glob, Grep, WebSearch
 effort: high
 ---

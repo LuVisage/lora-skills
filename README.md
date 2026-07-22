@@ -103,7 +103,7 @@ lora-trainer evaluate ./data/test.jsonl --format messages
 ## Features
 
 - **Data audit** — auto-detects JSONL format (instruction-output, messages, conversations), flags empty responses, duplicates, control characters, length outliers, and bilingual ratio
-- **VRAM calculator** — built-in spec catalog covering 40+ models across 12 families (Qwen2/2.5, LLaMA2/3/3.1/3.2, Mistral, Mixtral, ChatGLM, DeepSeek, Yi, Baichuan2, Phi-3, Gemma, InternLM2); MoE-aware; breaks down model weights, activations, optimizer states, and overhead
+- **VRAM calculator** — built-in spec catalog covering 40+ models across 13 families (Qwen2/2.5, LLaMA2/3/3.1/3.2, Mistral, Mixtral, ChatGLM, DeepSeek, Yi, Baichuan2, Phi-3, Gemma, InternLM2); MoE-aware; breaks down model weights, activations, optimizer states, and overhead
 - **Hyperparameter recommendation** — rank, alpha, target modules, dropout, learning rate, epochs, batch size, gradient accumulation; every value comes with a reason; task-aware across chat, code, math, roleplay, and CPT
 - **Script generation** — produces a complete QLoRA training script (Transformers + PEFT + BitsAndBytes + flash_attention_2), an inference script, and a YAML config; just fill in your model name and data path
 - **Evaluation** — generates side-by-side comparison scripts (base model vs LoRA) for post-training assessment
