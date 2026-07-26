@@ -1,40 +1,74 @@
 ---
 name: lora-trainer
 version: 2.5.0
-description: LoRA/QLoRA 大模型微调全能助手 —— 从数据分析、显存估算、超参数推荐到训练脚本生成，一站式搞定。支持 Qwen/Llama/Mistral/DeepSeek 等 40+ 模型、13 大家族。当用户提到"微调""fine-tune""LoRA""QLoRA""炼丹""SFT""instruction tuning""指令微调""adapter training""PEFT""参数高效微调""对齐训练""训练模型""继续预训练""显存不够""训练报错""debug""OOM""loss不收敛""过拟合"或询问 rank/alpha/batch size/learning rate/epochs/dropout 等超参数时自动触发。
+description: LoRA/QLoRA 大模型微调助手：自动分析 JSONL 数据、估算显存、推荐超参数（附理由）、生成可运行训练脚本。支持 Qwen/Llama/Mistral/DeepSeek 等 40+ 模型。当用户提到微调、fine-tune、LoRA、QLoRA、炼丹、SFT、指令微调、继续预训练、显存估算、训练报错、OOM 或询问超参数时自动触发。
 allowed-tools: Read, Write, Bash(python *), Bash(pip *), Glob, Grep, WebSearch
 effort: high
 ---
 
 # LoRA / QLoRA 微调助手
 
-> 从原始 JSONL 数据到可运行的训练脚本，一条命令搞定。支持 40+ 模型、5 种任务类型、
-> 自动数据分析、精准显存估算、有理由的超参数推荐。
+> 从原始 JSONL 数据到可运行的训练脚本，一条命令搞定支持 40+ 模型5 种任务类型
+> 自动数据分析精准显存估算有理由的超参数推荐
 
 **核心能力：**
 
-- **数据诊断** —— 自动检测格式，标记空回复、重复对、长度异常，估算 token 量
+- **数据诊断** —— 自动检测格式，标记空回复重复对长度异常，估算 token 量
 - **显存估算** —— 内置 40+ 模型规格库，MoE 感知，精确到各组件明细
 - **参数推荐** —— 57 条规则驱动，每个参数附理由，支持 chat/code/math/roleplay/CPT
 - **脚本生成** —— 一键输出 QLoRA 训练脚本 + 推理脚本 + YAML 配置，即开即用
-- **开箱即用** —— 内置完整可运行的训练脚本 (`train_qlora.py`)、推理脚本 (`inference.py`)、环境检测 (`check_env.py`)，改两行路径就能跑
+- **开箱即用** —— 5 个完整可运行脚本：训练 (`train_qlora.py`)、推理 (`inference.py`)、环境检测 (`check_env.py`)、数据校验 (`validate_data.py`)、显存估算 (`memory_check.py`)，改两行路径就能跑
 
-**触发场景：** 微调模型、LoRA 训练、QLoRA 训练、炼丹、SFT、指令微调、继续预训练、
-显存不够怎么办、怎么选 rank/学习率/batch size……
+**触发场景：** 微调模型LoRA 训练QLoRA 训练炼丹SFT指令微调继续预训练
+显存不够怎么办怎么选 rank/学习率/batch size……
 
 ---
 
 ## 快速开始
 
-第一次用？**你只需要告诉我训练数据在哪里。** 我会自动分析数据、估算显存、推荐参数、生成脚本。
+第一次用？两种方式任选一个：
 
-### 三种用法（选一个）
+### 方式一：直接用内置脚本（推荐，改两行就能跑）
 
-| 你想做什么 | 这样说 | 我会做什么 |
-|-----------|--------|-----------|
-| 🔍 检查数据能不能用 | `/lora:check-data ./data/train.jsonl` | 扫描质量，报告空回复、重复、异常 |
-| 📊 完整分析 + 生成脚本 | `/lora:analyze ./data/train.jsonl qwen2-7b chat` | 数据分析 → 显存 → 参数推荐 → 训练脚本 |
-| 🚀 快速炼丹 | `/lora:cook ./data/train.jsonl qwen2-7b chat` | 同上但输出精简，--auto 可自动开练 |
+内置 5 个独立脚本，每个都可以单独运行，无需安装任何依赖：
+
+```bash
+# 0. 先检查环境是否就绪（30 秒搞定）
+python skills/lora-trainer/scripts/check_env.py
+
+# 1. 验证数据质量 —— 训练前必做
+python skills/lora-trainer/scripts/validate_data.py ./data/train.jsonl
+
+# 2. 估算显存 —— 确认 GPU 能不能跑
+python skills/lora-trainer/scripts/memory_check.py qwen2-7b --seq-length 2048 --batch-size 4
+
+# 3. 复制训练脚本，改两行就开始训练
+cp skills/lora-trainer/scripts/train_qlora.py .
+# 编辑 train_qlora.py: 修改 MODEL_NAME 和 DATA_PATH
+python train_qlora.py
+```
+
+| 脚本 | 用途 | 命令示例 |
+|------|------|---------|
+| `check_env.py` | 一键检测环境 (CUDA/PyTorch/依赖/显存/镜像) | `python check_env.py` |
+| `validate_data.py` | 数据质量校验 (格式/空字段/重复/token估算) | `python validate_data.py ./data.jsonl` |
+| `memory_check.py` | 显存估算 (模型/LoRA/激活/优化器明细) | `python memory_check.py qwen2-7b` |
+| `train_qlora.py` | 完整训练 (含断点续训/OOM恢复/镜像检测) | `python train_qlora.py` |
+| `inference.py` | 模型推理 (交互/单次/批量) | `python inference.py` |
+
+训练脚本自带：环境自检、自动格式检测、checkpoint 断点续训、OOM 自动降 batch_size 重试、训练配置存档。
+
+### 方式二：通过 AI Agent 对话
+
+**你只需要告诉我训练数据在哪里** 我会自动分析数据估算显存推荐参数生成脚本
+
+| 你想做什么 | 这样说 | 直接复制这句 |
+|-----------|--------|------------|
+| 检查数据能不能用 | `/lora:check-data ./data/train.jsonl` | `/lora:check-data ./data/train.jsonl` |
+| 完整分析 + 生成脚本 | `/lora:analyze ./data/train.jsonl qwen2-7b chat` | `/lora:analyze ./data/train.jsonl qwen2-7b chat` |
+| 快速炼丹 | `/lora:cook ./data/train.jsonl qwen2-7b chat` | `/lora:cook ./data/train.jsonl qwen2-7b chat --auto` |
+| 一键配环境 | `/lora:setup` | `/lora:setup` |
+| 训练报错诊断 | `/lora:debug ./output/logs` | `/lora:debug` 然后把日志贴给我 |
 
 ### 自然语言也行
 
@@ -48,113 +82,133 @@ effort: high
 "训练 OOM 了怎么办？loss 不收敛怎么办？"
 ```
 
-### 先跑一下试试
-
-把上面的命令里的 `./data/train.jsonl` 换成你的实际数据文件路径，直接发给我。
-
-> 💡 **不需要提前记任何参数。** 我会根据你的数据和模型自动推荐所有配置，并告诉你每个参数为什么这么选。
+更多触发方式见 [TRIGGERS.md](./TRIGGERS.md)
 
 ---
 
-## 🇨🇳 国内用户：模型下载加速
+## 我能做什么 / 不能做什么
 
-HuggingFace 在国内访问较慢。生成的训练脚本默认从 HuggingFace 下载模型——建议先配置镜像。
+| 能做 | 不能做 |
+|------|--------|
+| SFT（指令微调）用 LoRA/QLoRA | 全量微调（full fine-tuning） |
+| CPT（继续预训练）用 LoRA/QLoRA | 大规模分布式训练（16+ GPU） |
+| 单卡训练（1 GPU） | 视觉/语音/多模态模型训练 |
+| 7B-72B 模型 QLoRA（含 MoE） | 100B+ 模型（需特殊配置，可能 OOM） |
+| 文本生成模型（CausalLM） | RLHF / DPO / 强化学习对齐 |
+| JSONL 格式数据 | CSV / Parquet / 数据库直连读取 |
+| 生成训练脚本 + 推理脚本 | 模型部署 / 服务化 / API 封装 |
+| 诊断常见训练问题 | 保证训练一定成功 |
+| 推荐参数 + 解释理由 | 保证推荐参数一定最优 |
+| Python 3.10+ / Linux & Windows | macOS GPU 训练（Apple Silicon 不在支持范围） |
 
-### 方法一：hf-mirror.com（推荐，一行命令）
+**不确定的情况**（新模型、不支持的数据格式、超出知识范围的问题）：直接说明而不是编造。
+
+---
+
+## 国内用户：模型下载加速
+
+HuggingFace 在国内访问较慢生成的训练脚本默认从 HuggingFace 下载模型——建议先配置镜像。
+
+### 自动方式（推荐）
+
+```bash
+# train_qlora.py 自带网络检测，加 --auto-mirror 自动配置
+python train_qlora.py --auto-mirror
+```
+
+或手动设置：
+
+**方法一：hf-mirror.com（一行命令）**
 
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com
 ```
 
-设置后所有 HuggingFace 下载自动走国内镜像，无需改代码。
+设置后所有 HuggingFace 下载自动走国内镜像，无需改代码
 
-### 方法二：ModelScope（阿里云，速度最快）
+**方法二：ModelScope（阿里云，速度最快）**
 
 ```bash
 pip install modelscope
 python -c "from modelscope import snapshot_download; snapshot_download('qwen/Qwen2-7B-Instruct', cache_dir='./models')"
 ```
 
-下载后在生成的训练脚本中把 `MODEL_NAME` 改成 `"./models/qwen/Qwen2-7B-Instruct"`（本地路径）即可。
+下载后在脚本中把 `MODEL_NAME` 改成 `"./models/qwen/Qwen2-7B-Instruct"`（本地路径）即可
 
-### 方法三：直接下载
-
-浏览器访问 https://hf-mirror.com ，搜索模型名，下载所有文件到本地目录。
-
-> ⚠️ 如果用镜像或本地路径，记得修改训练脚本中的 `MODEL_NAME` 变量。生成脚本时我会提醒你。
+> [WARN] 如果用镜像或本地路径，记得修改训练脚本中的 `MODEL_NAME` 变量生成脚本时我会提醒你
 
 ---
 
 ## 六条原则
 
-每一条都是微调翻车的高频原因，执行中必须遵守。
+每一条都是微调翻车的高频原因，执行中必须遵守
 
-1. **先分析数据，再推荐参数。** 样本量直接决定 rank、dropout、epochs 的取值。数据都没看就推荐参数等于瞎猜。
-2. **先计算显存，再确认 batch size。** OOM 是新手最常遇到的问题。你的职责是在训练开始前就避免它。
-3. **每个推荐参数都给出理由。** 用户需要知道为什么 r=8 而不是 16，这影响他们后续自己调参的判断力。
-4. **生成脚本前向用户确认配置。** 列出所有关键参数的取值和理由，确认后再生成文件。
-5. **数据有问题时明确指出。** 空回复过多、重复率高、长度异常——先暴露问题，不要等训练失败再回头排查。
-6. **能动手就不动嘴。** 用户说"看看数据"→ 直接跑分析脚本。用户说"显存够不够"→ 直接跑显存计算。用户说"生成脚本"→ 确认后直接生成。不要只给命令让用户自己跑——你跑完告诉结果，比让用户自己跑快 10 倍。
+1. **先分析数据，再推荐参数** 样本量直接决定 rankdropoutepochs 的取值数据都没看就推荐参数等于瞎猜
+2. **先计算显存，再确认 batch size** OOM 是新手最常遇到的问题你的职责是在训练开始前就避免它
+3. **每个推荐参数都给出理由** 用户需要知道为什么 r=8 而不是 16，这影响他们后续自己调参的判断力
+4. **生成脚本前向用户确认配置** 列出所有关键参数的取值和理由，确认后再生成文件
+5. **数据有问题时明确指出** 空回复过多重复率高长度异常——先暴露问题，不要等训练失败再回头排查
+6. **能动手就不动嘴** 用户说"看看数据" 直接跑分析脚本用户说"显存够不够" 直接跑显存计算用户说"生成脚本" 确认后直接生成不要只给命令让用户自己跑——你跑完告诉结果，比让用户自己跑快 10 倍
 
 ---
 
-## ⚠️ 常见坑 (Gotchas)
+## [WARN] 常见坑 (Gotchas)
 
-真实使用中高频踩坑记录。每一条都对应至少一次实际翻车。
+真实使用中高频踩坑记录每一条都对应至少一次实际翻车
 
 ### 数据坑
 
-- **JSONL 不是每行一个合法 JSON。** 用户经常把格式化的 JSON（多行）当 JSONL 用。第一步先验证 `python -c "import json; [json.loads(l) for l in open('data.jsonl')]"`。
-- **instruction 和 output 列名不标准。** 常见别名：`prompt`/`completion`、`question`/`answer`、`input`/`target`、`text`/`summary`。不要假设字段名一定是 `instruction`/`output`。
-- **字符数 ≠ token 数。** 中文字符在 tokenizer 里是 2-3 个 token，英文约 0.28 token/字符。分析报告现在同时输出字符长度和估算 token 长度，以估算 token 数为准选 max_seq_length。
-- **不要用字符 p95 当 max_seq_length。** 英文 2048 字符 ≈ 570 tokens，中文 2048 字 ≈ 4000+ tokens。差距 7×。用估算 token P95 而非字符 P95。
-- **角色扮演数据常带系统提示词。** `messages` 格式里有 `system` role 的话，这些 tokens 也参与训练但不产生 loss。样本量统计时要意识到这一点。
+- **JSONL 不是每行一个合法 JSON** 用户经常把格式化的 JSON（多行）当 JSONL 用第一步先验证 `python -c "import json; [json.loads(l) for l in open('data.jsonl')]"`
+- **instruction 和 output 列名不标准** 常见别名：`prompt`/`completion``question`/`answer``input`/`target``text`/`summary`不要假设字段名一定是 `instruction`/`output`
+- **字符数  token 数** 中文字符在 tokenizer 里是 2-3 个 token，英文约 0.28 token/字符分析报告现在同时输出字符长度和估算 token 长度，以估算 token 数为准选 max_seq_length
+- **不要用字符 p95 当 max_seq_length** 英文 2048 字符  570 tokens，中文 2048 字  4000+ tokens差距 7×用估算 token P95 而非字符 P95
+- **角色扮演数据常带系统提示词** `messages` 格式里有 `system` role 的话，这些 tokens 也参与训练但不产生 loss样本量统计时要意识到这一点
 
 ### 显存坑
 
-- **nvidia-smi 显示的 "used" 不是全部可用显存。** 可能有其他进程占用。不要假设 24GB 显卡就有 24GB 可用——先跑 `nvidia-smi --query-gpu=memory.free --format=csv`。
-- **量化配置不生效。** 用户说 "QLoRA" 但实际用的配置里 `load_in_4bit=False`。生成脚本时必须在代码里显式确认 `BitsAndBytesConfig(load_in_4bit=True)`。
-- **gradient checkpointing 不是免费的。** 开启后显存减少 ~30%，但训练时间增加 ~20%。不要在显存充裕时推荐它。
+- **nvidia-smi 显示的 "used" 不是全部可用显存** 可能有其他进程占用不要假设 24GB 显卡就有 24GB 可用——先跑 `nvidia-smi --query-gpu=memory.free --format=csv`
+- **量化配置不生效** 用户说 "QLoRA" 但实际用的配置里 `load_in_4bit=False`生成脚本时必须在代码里显式确认 `BitsAndBytesConfig(load_in_4bit=True)`
+- **gradient checkpointing 不是免费的** 开启后显存减少 ~30%，但训练时间增加 ~20%不要在显存充裕时推荐它
 
 ### 模型架构坑
 
-- **target_modules 命名因模型架构而异。** LLaMA/Qwen/Mistral 用 `q_proj, k_proj, v_proj, o_proj`，但 Phi-3 用融合的 `qkv_proj`，部分 GPT 变体用 `query_key_value`，Bloom 用 `dense` 代替 `o_proj`。如果 target_modules 里的名字在模型里不存在，`get_peft_model` 会静默跳过，训练完发现什么都没学到。不确定时先 `print(model)` 看一眼实际的层名。
-- **GQA（分组查询注意力）影响 k_proj/v_proj 参数量。** Qwen2、LLaMA3、Mistral 都用了 GQA，k_proj 和 v_proj 的维度比 q_proj 小。这不影响 target_modules 的选择但影响 LoRA 参数量的计算（影响 < 5%，可忽略）。
+- **target_modules 命名因模型架构而异** LLaMA/Qwen/Mistral 用 `q_proj, k_proj, v_proj, o_proj`，但 Phi-3 用融合的 `qkv_proj`，部分 GPT 变体用 `query_key_value`，Bloom 用 `dense` 代替 `o_proj`如果 target_modules 里的名字在模型里不存在，`get_peft_model` 会静默跳过，训练完发现什么都没学到不确定时先 `print(model)` 看一眼实际的层名
+- **GQA（分组查询注意力）影响 k_proj/v_proj 参数量** Qwen2LLaMA3Mistral 都用了 GQA，k_proj 和 v_proj 的维度比 q_proj 小这不影响 target_modules 的选择但影响 LoRA 参数量的计算（影响 < 5%，可忽略）
 
 ### 参数坑
 
-- **batch_size=1 时 gradient_accumulation=16 ≠ batch_size=16。** BatchNorm 等少数层的行为不同。不过 Transformer 架构下基本等价，可以忽略此差异。
-- **大 rank + 小数据 = 必过拟合。** 数据 < 500 条用 r=32 基本上就是背数据了。这不是建议，是数学规律。
-- **学习率不随 batch size 调整。** 有效 batch 翻倍时，lr 应该按 sqrt 比例调整。但 LoRA 场景下影响不大，不用主动提——除非用户自己改了 batch size。
+- **batch_size=1 时 gradient_accumulation=16  batch_size=16** BatchNorm 等少数层的行为不同不过 Transformer 架构下基本等价，可以忽略此差异
+- **大 rank + 小数据 = 必过拟合** 数据 < 500 条用 r=32 基本上就是背数据了这不是建议，是数学规律
+- **学习率不随 batch size 调整** 有效 batch 翻倍时，lr 应该按 sqrt 比例调整但 LoRA 场景下影响不大，不用主动提——除非用户自己改了 batch size
 
 ### 交互坑
 
-- **用户说 "帮我微调" 但没给数据文件。** 别猜。第一步就问：数据在哪？
-- **用户给了 .json 但其实是 .jsonl。** 手动检查文件内容。Python 一行一行验证比瞎猜可靠。
-- **生成完脚本用户直接跑，然后报错。** 脚本里 MODEL_NAME 和 DATA_PATH 必须用占位符或注释标记清楚，让用户一看就知道要改什么。
+- **用户说 "帮我微调" 但没给数据文件** 别猜第一步就问：数据在哪？
+- **用户给了 .json 但其实是 .jsonl** 手动检查文件内容Python 一行一行验证比瞎猜可靠
+- **生成完脚本用户直接跑，然后报错** 脚本里 MODEL_NAME 和 DATA_PATH 必须用占位符或注释标记清楚，让用户一看就知道要改什么
 
 ---
 
 ## 参数推荐规则
 
-以下规则直接使用，不需要调用 Python。Python 脚本只用于精确数值计算（显存、数据统计）。
+以下规则直接使用，不需要调用 PythonPython 脚本只用于精确数值计算（显存数据统计）
 
 ### Rank (r)
 
 ```
-样本 < 500         → r=4     数据量小，rank 过大会严重过拟合
-500 ≤ 样本 < 1000  → r=4     同上
-1000 ≤ 样本 < 5000 → r=8     最常见的区间，8 是安全选择
-5000 ≤ 样本 < 20000 → r=16   数据充足，可以提高容量
-样本 ≥ 20000       → r=32    大数据集，低 rank 会欠拟合
+样本 < 500          r=4     数据量小，rank 过大会严重过拟合
+500  样本 < 1000   r=4     同上
+1000  样本 < 5000  r=8     最常见的区间，8 是安全选择
+5000  样本 < 20000  r=16   数据充足，可以提高容量
+样本  20000        r=32    大数据集，低 rank 会欠拟合
 ```
 
 任务类型调整（受数据量上限约束）：
-- 代码任务 → r 建议 16，但不超过当前数据量区间的上限。样本 < 1000 时最高 r=8，样本 < 500 时最高 r=4。
-- 数学推理 → r 建议 16，约束同上。数据量不够时大 rank 比低 rank 效果更差。
-- 角色扮演 → r 不超过 8。目标是注入风格而非改变模型底层能力。
+- 代码任务  r 建议 16，但不超过当前数据量区间的上限样本 < 1000 时最高 r=8，样本 < 500 时最高 r=4
+- 数学推理  r 建议 16，约束同上数据量不够时大 rank 比低 rank 效果更差
+- 角色扮演  r 不超过 8目标是注入风格而非改变模型底层能力
 
-关键原则：**数据量约束优先于任务类型调整。** 300 条代码数据用 r=16 必定过拟合，效果不如 r=4。
+关键原则：**数据量约束优先于任务类型调整** 300 条代码数据用 r=16 必定过拟合，效果不如 r=4
 
 ### Alpha
 
@@ -167,22 +221,22 @@ python -c "from modelscope import snapshot_download; snapshot_download('qwen/Qwe
 ### Target Modules
 
 ```
-聊天      → [q_proj, v_proj]
-代码      → [q_proj, k_proj, v_proj, o_proj]
-数学      → [q_proj, v_proj, up_proj, down_proj, gate_proj]
-角色扮演  → [v_proj]
-CPT       → [q_proj, k_proj, v_proj, o_proj, up_proj, down_proj, gate_proj]
+聊天       [q_proj, v_proj]
+代码       [q_proj, k_proj, v_proj, o_proj]
+数学       [q_proj, v_proj, up_proj, down_proj, gate_proj]
+角色扮演   [v_proj]
+CPT        [q_proj, k_proj, v_proj, o_proj, up_proj, down_proj, gate_proj]
 ```
 
-模型 ≥ 13B 时，所有任务类型追加 o_proj。
+模型  13B 时，所有任务类型追加 o_proj
 
 ### Dropout
 
 ```
-样本 < 500      → 0.15
-500 ≤ 样本 < 1000  → 0.10
-1000 ≤ 样本 < 10000 → 0.05
-样本 ≥ 10000    → 0.0     数据量足够，不需要 dropout
+样本 < 500       0.15
+500  样本 < 1000   0.10
+1000  样本 < 10000  0.05
+样本  10000     0.0     数据量足够，不需要 dropout
 ```
 
 ### 学习率
@@ -190,43 +244,43 @@ CPT       → [q_proj, k_proj, v_proj, o_proj, up_proj, down_proj, gate_proj]
 基准 lr = 2e-4，根据 rank 调整：
 
 ```
-r=4     → 1e-4
-r=8     → 2e-4
-r=16    → 3e-4
-r≥32    → 5e-4
+r=4      1e-4
+r=8      2e-4
+r=16     3e-4
+r32     5e-4
 ```
 
-任务修正：角色扮演 ×1.5，数学推理 ×0.75。
-数据量修正：样本 > 20000 → ×1.2。
+任务修正：角色扮演 ×1.5，数学推理 ×0.75
+数据量修正：样本 > 20000  ×1.2
 
 ### 训练轮数
 
 ```
-样本 < 500         → 5 epochs
-500 ≤ 样本 < 5000  → 3 epochs
-5000 ≤ 样本 < 20000 → 2 epochs
-样本 ≥ 20000       → 1 epoch
+样本 < 500          5 epochs
+500  样本 < 5000   3 epochs
+5000  样本 < 20000  2 epochs
+样本  20000        1 epoch
 ```
 
 ### Batch Size
 
-目标有效 batch = 16。根据显存设定实际 batch size，用 gradient accumulation 补齐差额：
+目标有效 batch = 16根据显存设定实际 batch size，用 gradient accumulation 补齐差额：
 
 ```
-GPU < 8GB    → batch_size=1,  gradient_accumulation=16
-8-16GB       → batch_size=2,  gradient_accumulation=8
-16-24GB      → batch_size=4,  gradient_accumulation=4
-24-48GB      → batch_size=8,  gradient_accumulation=2
-> 48GB       → batch_size=16, gradient_accumulation=1
+GPU < 8GB     batch_size=1,  gradient_accumulation=16
+8-16GB        batch_size=2,  gradient_accumulation=8
+16-24GB       batch_size=4,  gradient_accumulation=4
+24-48GB       batch_size=8,  gradient_accumulation=2
+> 48GB        batch_size=16, gradient_accumulation=1
 ```
 
 数据量修正（调整有效 batch 目标）：
-- 样本 < 200 → 目标有效 batch=4 或 8（小 batch 噪声有正则化效果）
-- 样本 > 50k → 目标有效 batch=32 或 64（大批量减少梯度方差）
+- 样本 < 200  目标有效 batch=4 或 8（小 batch 噪声有正则化效果）
+- 样本 > 50k  目标有效 batch=32 或 64（大批量减少梯度方差）
 
 ### DoRA（推荐替代 LoRA）
 
-DoRA (Weight-Decomposed Low-Rank Adaptation) 将预训练权重分解为幅度+方向，只对方向做低秩更新。相同 rank 下效果稳定优于 LoRA，数学/代码任务提升尤为明显。
+DoRA (Weight-Decomposed Low-Rank Adaptation) 将预训练权重分解为幅度+方向，只对方向做低秩更新相同 rank 下效果稳定优于 LoRA，数学/代码任务提升尤为明显
 
 ```
 适用场景: 所有任务均可使用，数学/代码任务推荐优先选择
@@ -243,23 +297,23 @@ peft_config = LoraConfig(
     lora_alpha=16,
     target_modules=["q_proj", "v_proj"],
     lora_dropout=0.05,
-    use_dora=True,              # ← 就这一行，其他不变
+    use_dora=True,              #  就这一行，其他不变
     task_type="CAUSAL_LM",
 )
 ```
 
-用户问"DoRA 还是 LoRA"时：数据 < 1000 条优先 DoRA（正则化效果更好），数学/代码任务优先 DoRA，简单聊天任务两者皆可。
+用户问"DoRA 还是 LoRA"时：数据 < 1000 条优先 DoRA（正则化效果更好），数学/代码任务优先 DoRA，简单聊天任务两者皆可
 
 ### LoRA+（进阶选项）
 
-LoRA+ 给 A 矩阵和 B 矩阵设置不同的学习率（`lr_B = lr_A × 16`），收敛更快、最终效果更好。ICLR 2024 论文提出，已在 PEFT 库中原生支持。
+LoRA+ 给 A 矩阵和 B 矩阵设置不同的学习率（`lr_B = lr_A × 16`），收敛更快最终效果更好ICLR 2024 论文提出，已在 PEFT 库中原生支持
 
 ```
 适用场景: 所有任务均可尝试，尤其数据 > 5k 时收益明显
 注意: LoRA+ 需要更高学习率（基准 lr 提高 2-4×），否则收敛慢
 ```
 
-**代码（需要 PEFT ≥ 0.10）：**
+**代码（需要 PEFT  0.10）：**
 ```python
 from peft import LoraConfig
 
@@ -268,17 +322,17 @@ peft_config = LoraConfig(
     lora_alpha=32,
     target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
     lora_dropout=0.05,
-    use_rslora=True,            # ← LoRA+: lr_B = lr_A × 16
+    use_rslora=True,            #  LoRA+: lr_B = lr_A × 16
     task_type="CAUSAL_LM",
 )
 # 配合更高学习率: lr=5e-4 而不是 2e-4
 ```
 
-用户问"LoRA+ 怎么用"时：先确认 PEFT 版本 ≥ 0.10，然后建议 `use_rslora=True` + lr 翻 2-4 倍。小数据集（< 1k）不优先推荐。
+用户问"LoRA+ 怎么用"时：先确认 PEFT 版本  0.10，然后建议 `use_rslora=True` + lr 翻 2-4 倍小数据集（< 1k）不优先推荐
 
 ### NEFTune（默认启用）
 
-NEFTune 在 embedding 层注入微量噪声（`neftune_noise_alpha=5`），成本为零（不增加显存和训练时间），instruction-tuning 场景下稳定提升 3-5%。业界标配。
+NEFTune 在 embedding 层注入微量噪声（`neftune_noise_alpha=5`），成本为零（不增加显存和训练时间），instruction-tuning 场景下稳定提升 3-5%业界标配
 
 ```
 默认值: neftune_noise_alpha=5
@@ -291,7 +345,7 @@ from transformers import TrainingArguments
 
 training_args = TrainingArguments(
     # ... 其他参数 ...
-    neftune_noise_alpha=5,   # ← NEFTune: SFT 默认 5, CPT 设 0
+    neftune_noise_alpha=5,   #  NEFTune: SFT 默认 5, CPT 设 0
 )
 ```
 
@@ -305,7 +359,7 @@ training_args = TrainingArguments(
 CPT（继续预训练）: constant_with_warmup（保持恒定 lr）
 ```
 
-warmup 比例：总步数的 10%（最少 10 步）。小数据集尤其重要——warmup 太大会浪费宝贵的训练步数。
+warmup 比例：总步数的 10%（最少 10 步）小数据集尤其重要——warmup 太大会浪费宝贵的训练步数
 
 ---
 
@@ -323,9 +377,9 @@ for k,v in mem.items():
 "
 ```
 
-`num_modules` 按 target_modules 数量填：chat=2, code=4, math=5, roleplay=1。这个数字直接影响优化器显存计算。
+`num_modules` 按 target_modules 数量填：chat=2, code=4, math=5, roleplay=1这个数字直接影响优化器显存计算
 
-快速参考值见 `references/vram-reference.md`（QLoRA 4-bit, seq=2048, bs=4, r=8 下的常见模型显存占用）。
+快速参考值见 `references/vram-reference.md`（QLoRA 4-bit, seq=2048, bs=4, r=8 下的常见模型显存占用）
 
 ---
 
@@ -333,7 +387,7 @@ for k,v in mem.items():
 
 ### Step 0: 启动检查（每次交互开始时）
 
-1. **版本确认** — 检查 SKILL 版本是否最新（当前 v2.4.0），版本信息在 SKILL.md 头部的 `version` 字段。如果用户报告行为与文档不符，优先怀疑版本问题。
+1. **版本确认** — 检查 SKILL 版本是否最新（当前 v2.5.0），版本信息在 SKILL.md 头部的 `version` 字段如果用户报告行为与文档不符，优先怀疑版本问题
 2. **环境探测** — 静默尝试检测 Python 和 CUDA 环境，失败不报错只记下：
    ```bash
    python -c "import torch; print(f'CUDA: {torch.cuda.is_available()} | GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')" 2>/dev/null || echo "no-torch"
@@ -348,7 +402,7 @@ for k,v in mem.items():
 
 建议询问：
 - 任务类型（chat / code / math / roleplay，默认 chat）
-- GPU 显存大小。Step 0 已尝试自动检测，失败则问用户。
+- GPU 显存大小Step 0 已尝试自动检测，失败则问用户
 
 ### Step 2: 分析数据
 
@@ -361,27 +415,38 @@ print(r['report'])
 "
 ```
 
-重点关注：样本总量、95% 分位长度（用于确定 max_seq_length）、空回复率（> 5% 必须警告）。
+重点关注：样本总量95% 分位长度（用于确定 max_seq_length）空回复率（> 5% 必须警告）
 
 ### Step 3: 计算显存
 
-运行显存计算脚本，展示各项占用明细（模型权重、激活值、优化器、开销）和总计。
+运行显存计算脚本，展示各项占用明细（模型权重激活值优化器开销）和总计
 
 与用户 GPU 容量对比，给出判断：
-- 剩余 > 30% → 安全
-- 剩余 10-30% → 可以，但建议开启 gradient checkpointing
-- 剩余 < 10% → 风险，建议降低 seq_length 或 batch_size
-- 超出 → 必须调整配置
+- 剩余 > 30%  安全
+- 剩余 10-30%  可以，但建议开启 gradient checkpointing
+- 剩余 < 10%  风险，建议降低 seq_length 或 batch_size
+- 超出  必须调整配置
 
 ### Step 4: 推荐参数
 
-使用上文规则生成完整配置。每个参数附带理由。以表格或 KV 列表形式展示。
+使用上文规则生成完整配置每个参数附带理由以表格或 KV 列表形式展示
 
 ### Step 5: 确认并生成
 
-向用户展示完整配置清单，等待确认。
+向用户展示完整配置清单，等待确认确认后执行：
 
-确认后执行：
+**首选路径：直接用内置 `train_qlora.py`**
+
+告诉用户：
+```
+可以直接用内置的训练脚本，改两行就能跑：
+
+cp skills/lora-trainer/scripts/train_qlora.py .
+# 编辑 train_qlora.py: 修改 MODEL_NAME 和 DATA_PATH
+python train_qlora.py
+```
+
+如果用户需要自定义更强的脚本，再走 ScriptBuilder 生成路径：
 
 ```python
 import sys; sys.path.insert(0, "${CLAUDE_PLUGIN_ROOT}")
@@ -389,40 +454,31 @@ from scripts.script_builder import ScriptBuilder
 config = { ... }
 builder = ScriptBuilder(
     config,
-    data_format='<检测到的格式>',   # instruction-output / messages / conversations
+    data_format='<检测到的格式>',
     max_seq_length=<p95长度>,
 )
 paths = builder.build_all()
 ```
 
-生成后告知用户：
-1. 编辑训练脚本中的 `MODEL_NAME` 和 `DATA_PATH`
-2. 安装依赖：`pip install -r requirements.txt`
-3. 运行训练：`python train_lora_xxx.py`
-
-> 💡 **用户也可以直接用内置的 `train_qlora.py`**（位于 `skills/lora-trainer/scripts/`）。
-> 这个脚本已预设好所有最佳实践参数，改两行路径就能跑。适合不想从头配置的用户。
-> 复制到工作目录后：`python train_qlora.py`
-
 ### Step 5.5: 训练跟进（运行时支持）
 
-脚本生成不是终点。明确告诉用户：**训练过程中遇到任何问题，随时回来找我。**
+脚本生成不是终点明确告诉用户：**训练过程中遇到任何问题，随时回来找我**
 
 我会帮你处理的常见情况：
 
 | 用户说 | 我会做什么 |
 |--------|-----------|
-| "训练 OOM 了" | 重新计算显存 → 调整 seq_length/batch_size → 生成新脚本 |
-| "loss 不收敛 / loss 乱跳" | 检查数据格式 → 确认学习率 → 检查梯度裁剪 |
-| "训练完了但效果不好" | 分析可能原因 → 建议调参方向 → 生成评估脚本对比 |
+| "训练 OOM 了" | 重新计算显存  调整 seq_length/batch_size  生成新脚本 |
+| "loss 不收敛 / loss 乱跳" | 检查数据格式  确认学习率  检查梯度裁剪 |
+| "训练完了但效果不好" | 分析可能原因  建议调参方向  生成评估脚本对比 |
 | "这个报错是什么意思" | 根据报错信息匹配故障排查表，给出具体解决步骤 |
-| "帮我看看训练日志" | 分析 loss 曲线 → 检查是否过拟合 → 给出调整建议 |
+| "帮我看看训练日志" | 分析 loss 曲线  检查是否过拟合  给出调整建议 |
 
-**不需要重新走完整流程**——告诉我具体问题，我会直接诊断。
+**不需要重新走完整流程**——告诉我具体问题，我会直接诊断
 
 ### Step 6: 评估
 
-训练完成后，建议用户评估微调效果。询问是否生成评估脚本：
+训练完成后，建议用户评估微调效果询问是否生成评估脚本：
 
 ```python
 import sys; sys.path.insert(0, "${CLAUDE_PLUGIN_ROOT}")
@@ -431,19 +487,19 @@ ev = Evaluator('<测试数据路径>')
 eval_script = ev.build_eval_script()
 ```
 
-评估脚本对比基座模型 vs LoRA 模型在相同 prompt 上的输出，保存到 `eval_results.json`。
+评估脚本对比基座模型 vs LoRA 模型在相同 prompt 上的输出，保存到 `eval_results.json`
 
 告诉用户评估要点：
 - 看输出是否遵循了训练数据的格式/风格（格式一致性）
 - 看事实性知识是否保留（不要因微调引入幻觉）
 - 建议留 10-20 条数据不参与训练，专门用于评估
-- 如果效果不理想 → 排查数据质量 → 调整参数 → 重新训练
+- 如果效果不理想  排查数据质量  调整参数  重新训练
 
 ---
 
 ## 示例：完整流程
 
-下面展示一个典型交互的预期输出。用户输入：
+下面展示一个典型交互的预期输出用户输入：
 
 ```
 /lora:analyze ./data/chat_train.jsonl qwen2-7b chat 16
@@ -453,58 +509,58 @@ eval_script = ev.build_eval_script()
 
 **数据报告（Step 2 结果）：**
 ```
-📊 数据诊断：chat_train.jsonl
+ 数据诊断：chat_train.jsonl
   - 样本总量：2,340 条
-  - 质量等级：✅ 良好
+  - 质量等级：[OK] 良好
   - 平均长度：342 tokens | P95：1,024 tokens | 最大：2,856 tokens
-  - 空回复：3 条 (0.1%) ✅
-  - 重复对：12 条 (0.5%) ✅
+  - 空回复：3 条 (0.1%) [OK]
+  - 重复对：12 条 (0.5%) [OK]
   - 格式：instruction-output
 ```
 
 **显存评估（Step 3 结果）：**
 ```
-💾 显存估算：Qwen2-7B + QLoRA 4-bit
+ 显存估算：Qwen2-7B + QLoRA 4-bit
   - 模型权重：3.5 GB | LoRA 参数：0.02 GB
   - 激活值 (seq=1024, bs=4)：1.8 GB
   - 优化器状态：0.3 GB | 系统开销：0.6 GB
   - 总计：6.2 GB
 
-你的显卡：16 GB → 剩余 9.8 GB (61%) ✅ 安全
-可以开 bs=4, gradient_accumulation=4。
+你的显卡：16 GB  剩余 9.8 GB (61%) [OK] 安全
+可以开 bs=4, gradient_accumulation=4
 ```
 
 **参数推荐（Step 4 结果）：**
 ```
-⚙️ 推荐配置：
-  rank=8         ← 2,340 条数据，常规区间，8 是安全选择
-  alpha=16       ← 标准 2×r，平衡学习强度
-  target_modules=[q_proj, v_proj]  ← 聊天任务，Q/V 足够了
-  dropout=0.05   ← 1k-10k 区间标准值
-  lr=2e-4        ← r=8 基准值，聊天任务不调整
-  epochs=3       ← 500-5k 区间，3 轮稳妥
-  batch_size=4   ← 16GB 显存对应配置
-  gradient_accumulation=4  ← 目标有效 batch=16
+ 推荐配置：
+  rank=8          2,340 条数据，常规区间，8 是安全选择
+  alpha=16        标准 2×r，平衡学习强度
+  target_modules=[q_proj, v_proj]   聊天任务，Q/V 足够了
+  dropout=0.05    1k-10k 区间标准值
+  lr=2e-4         r=8 基准值，聊天任务不调整
+  epochs=3        500-5k 区间，3 轮稳妥
+  batch_size=4    16GB 显存对应配置
+  gradient_accumulation=4   目标有效 batch=16
 ```
 
-然后等待用户确认再生成脚本。
+然后等待用户确认再生成脚本
 
 **常见反馈的回应：**
-- 用户说 "rank 能不能大一点" → "可以调到 16，但 2,340 条数据用 16 风险不大。如果你想要更强效果可以试。"
-- 用户说 "学习率太高了吧" → "2e-4 是 LoRA 的行业基准。想保守的话可以降到 1e-4，但收敛会慢一些。"
-- 用户说 "就按这个来" → 调用 ScriptBuilder 生成文件，列出生成的文件路径和下一步操作。生成后询问："训练完成后需要我帮你生成评估脚本吗？可以对比基座模型和微调模型的效果差异。"
+- 用户说 "rank 能不能大一点"  "可以调到 16，但 2,340 条数据用 16 风险不大如果你想要更强效果可以试"
+- 用户说 "学习率太高了吧"  "2e-4 是 LoRA 的行业基准想保守的话可以降到 1e-4，但收敛会慢一些"
+- 用户说 "就按这个来"  告诉用户可以直接用内置 train_qlora.py 或通过 ScriptBuilder 生成文件，列出生成的文件路径和下一步操作生成后询问："训练完成后需要我帮你生成评估脚本吗？可以对比基座模型和微调模型的效果差异"
 
 ---
 
 ## 继续预训练 (CPT)
 
-CPT 和 SFT 有本质区别：CPT 是教模型新领域的知识（如医学、法律），SFT 是教模型按特定格式回答问题。
+CPT 和 SFT 有本质区别：CPT 是教模型新领域的知识（如医学法律），SFT 是教模型按特定格式回答问题
 
-### CPT vs SFT 参数差异
+详细指南见 `references/cpt-guide.md`，以下是核心参数差异：
 
 ```
 参数          SFT（指令微调）          CPT（继续预训练）
-─────────────────────────────────────────────────────
+
 rank          r=4-32（数据驱动）       r=16-64（需要更强知识注入）
 alpha         2×r                      2×r（标准比例不变）
 target_mods   [q,v] 或 [q,k,v,o]      [q,k,v,o,up,down,gate]（全层训练）
@@ -527,26 +583,27 @@ packing       不必须                    强烈建议（短文本拼成长序�
 ### CPT 执行流程
 
 1. 确认用户意图是 CPT 而非 SFT（关键区分：用户是否想在特定领域注入知识？）
-2. 数据检查：确认每行有 `text` 字段、估算总 token 量（CPT 建议 > 10M tokens）
+2. 数据检查：确认每行有 `text` 字段估算总 token 量（CPT 建议 > 10M tokens）
 3. 显存计算：target_modules 数量多（7 个），优化器显存比 SFT 高 3-4×
 4. 参数推荐：用 CPT 专用规则（上表），启用 packing
 5. 生成脚本：使用纯文本拼接模板，不添加 instruction 前缀
+
+`train_qlora.py` 支持 CPT 模式：设置 `TARGET_MODULES = ["q_proj","k_proj","v_proj","o_proj","up_proj","down_proj","gate_proj"]`，`neftune_noise_alpha=0`
 
 ---
 
 ## 生成前自检
 
-每次生成脚本前逐项确认。任一项不通过就暂停。
+每次生成脚本前逐项确认任一项不通过就暂停
 
-- 数据看过了吗？样本量、长度分布、质量问题都清楚了？
+- 数据看过了吗？样本量长度分布质量问题都清楚了？
 - 显存算过了吗？不是猜的，是脚本算出来的？
 - rank 的取值考虑了数据量和任务类型？
 - batch size 是根据显存推的，不是拍脑袋写的默认值？
 - 每个参数都有理由吗？用户问"为什么"时能答上来？
 - 用户确认过配置了吗？
-- 写的内容有没有套话？"此外"、"值得注意的是"、"总而言之"——删掉它们意思会不会变？
 
-遇到不确定的情况（新模型、不支持的格式、超出知识范围的问题），直接说明而不是编造。
+遇到不确定的情况（见"我能做什么 / 不能做什么"表），直接说明而不是编造
 
 ---
 
@@ -554,11 +611,12 @@ packing       不必须                    强烈建议（短文本拼成长序�
 
 自动检测并适配以下格式：
 
-- `{"instruction": "...", "output": "..."}` → Instruction/Response 模板
-- `{"messages": [{"role": "user", ...}, {"role": "assistant", ...}]}` → ChatML 模板
-- `{"conversations": [...]}` → 同 ChatML
+- `{"instruction": "...", "output": "..."}`  Instruction/Response 模板
+- `{"messages": [{"role": "user", ...}, {"role": "assistant", ...}]}`  ChatML 模板
+- `{"conversations": [...]}`  同 ChatML
+- `{"text": "..."}`  CPT 纯文本
 
-非标准格式时列出实际字段，询问用户 instruction 和 output 字段名。
+非标准格式时列出实际字段，询问用户 instruction 和 output 字段名
 
 ---
 
@@ -579,13 +637,13 @@ nvidia-smi --query-gpu=memory.free --format=csv,noheader
 python -c "import json; [json.loads(l) for l in open('你的数据.jsonl')]"
 ```
 
-第三项如果报 `JSONDecodeError`，说明文件不是合法的 JSONL。用 `/lora:check-data` 诊断。
+第三项如果报 `JSONDecodeError`，说明文件不是合法的 JSONL用 `/lora:check-data` 诊断
 
 ### 训练中：常见报错速查
 
 | 报错信息（关键词） | 原因 | 解决方法（按优先级） |
 |-------------------|------|---------------------|
-| `CUDA out of memory` | 显存不够 | ①降 `max_seq_length`（最有效，砍半显存减 ~40%） ②降 `batch_size` 到 1 ③确认 `load_in_4bit=True` ④设 `gradient_checkpointing=True` |
+| `CUDA out of memory` | 显存不够 | 降 `max_seq_length`（最有效，砍半显存减 ~40%） 降 `batch_size` 到 1 确认 `load_in_4bit=True` 设 `gradient_checkpointing=True` |
 | `No module named 'torch'` | PyTorch 没装 | `pip install lora-trainer[train]` 一键安装全部依赖 |
 | `No module named 'transformers'` | transformers 没装 | 同上，或 `pip install transformers` |
 | `No module named 'bitsandbytes'` | bitsandbytes 没装 | `pip install bitsandbytes`；Windows 用户可能需要预编译 wheel |
@@ -601,12 +659,12 @@ python -c "import json; [json.loads(l) for l in open('你的数据.jsonl')]"
 
 | 现象 | 怎么诊断 | 怎么修 |
 |------|---------|--------|
-| loss 不下降 | 看 tensorboard：`tensorboard --logdir ./output/logs` | ①确认数据格式正确 ②lr 太低 → 当前 lr×2 ③数据有 NaN → 清洗 |
-| loss 下降但输出乱码 | 对比训练前后模型输出 | ①lr 太高 → 降为 1/2 ②数据质量差 ③epochs 太多 |
-| loss 中途突然 spike | 找到 spike 的 step，定位对应 batch | ①降 lr ②确认 `max_grad_norm=1.0` 已设 ③检查数据中是否有超长/乱码样本 |
-| 过拟合（train loss ≪ eval loss） | 留 5-10% 数据做 eval | ①dropout +0.05 ②rank 减半 ③epochs -1 |
-| 效果不达预期 | 检查输出格式是否遵循训练数据 | ①数据覆盖目标场景？ ②提高 rank ③增加数据量 |
-| 微调后幻觉增多 | 对比基座模型输出 | ①降 lr（×0.5） ②降 rank ③换 DoRA ④增加数据多样性 |
+| loss 不下降 | 看 tensorboard：`tensorboard --logdir ./output/logs` | 确认数据格式正确 lr 太低  当前 lr×2 数据有 NaN  清洗 |
+| loss 下降但输出乱码 | 对比训练前后模型输出 | lr 太高  降为 1/2 数据质量差 epochs 太多 |
+| loss 中途突然 spike | 找到 spike 的 step，定位对应 batch | 降 lr 确认 `max_grad_norm=1.0` 已设 检查数据中是否有超长/乱码样本 |
+| 过拟合（train loss  eval loss） | 留 5-10% 数据做 eval | dropout +0.05 rank 减半 epochs -1 |
+| 效果不达预期 | 检查输出格式是否遵循训练数据 | 数据覆盖目标场景？ 提高 rank 增加数据量 |
+| 微调后幻觉增多 | 对比基座模型输出 | 降 lr（×0.5） 降 rank 换 DoRA 增加数据多样性 |
 
 ### 训练完成后用这个诊断
 
@@ -616,7 +674,7 @@ python -c "import json; [json.loads(l) for l in open('你的数据.jsonl')]"
 /lora:debug ./output/logs
 ```
 
-或者把训练日志/报错贴给我，我会分析 loss 曲线、梯度变化、学习率调度，帮你定位问题。
+或者把训练日志/报错贴给我，我会分析 loss 曲线梯度变化学习率调度，帮你定位问题
 
 ---
 
@@ -632,41 +690,41 @@ python -c "import json; [json.loads(l) for l in open('你的数据.jsonl')]"
 
 ## 训练时间估算
 
-给用户一个大致预期，避免"要训练多久"被问两遍。
+给用户一个大致预期，避免"要训练多久"被问两遍
 
 ```
 硬件假设: RTX 4090 (24GB), QLoRA 4-bit, 7B 模型, FP16
 
-1,000 条, seq=2048, bs=4, 3 epochs → ~30-60 分钟
-5,000 条, seq=2048, bs=4, 2 epochs → ~2-4 小时
-20,000 条, seq=2048, bs=4, 1 epoch → ~3-6 小时
-50,000 条, seq=2048, bs=8, 1 epoch → ~5-10 小时
+1,000 条, seq=2048, bs=4, 3 epochs  ~30-60 分钟
+5,000 条, seq=2048, bs=4, 2 epochs  ~2-4 小时
+20,000 条, seq=2048, bs=4, 1 epoch  ~3-6 小时
+50,000 条, seq=2048, bs=8, 1 epoch  ~5-10 小时
 
-CPU 推断公式: (样本数 × 平均长度 × epochs) / (GPU算力系数 × batch_size)
-              RTX 4090 算力系数 ≈ 2000 tokens/sec (7B QLoRA)
+推断公式: (样本数 × 平均长度 × epochs) / (GPU算力系数 × batch_size)
+          RTX 4090 算力系数  2000 tokens/sec (7B QLoRA)
 ```
 
 ## 多卡训练
 
-用户有多张 GPU 时，给出简要指引，不改动生成的脚本。
+用户有多张 GPU 时，给出简要指引，不改动生成的脚本
 
-- **2× GPU, 相同型号** → 推荐 DeepSpeed ZeRO-2。启动：`deepspeed --num_gpus=2 train.py --deepspeed ds_config.json`
-- **4× GPU+** → 推荐 DeepSpeed ZeRO-3。显存几乎线性扩展。
-- **单卡就够了** → 不要推荐多卡。7B QLoRA 用 24GB 单卡绰绰有余。
-- **70B+ 模型** → 必须多卡或量化到 4-bit + 单卡大显存（48GB+）。
+- **2× GPU, 相同型号**  推荐 DeepSpeed ZeRO-2启动：`deepspeed --num_gpus=2 train.py --deepspeed ds_config.json`
+- **4× GPU+**  推荐 DeepSpeed ZeRO-3显存几乎线性扩展
+- **单卡就够了**  不要推荐多卡7B QLoRA 用 24GB 单卡绰绰有余
+- **70B+ 模型**  必须多卡或量化到 4-bit + 单卡大显存（48GB+）
 
-多卡训练的 batch_size 计算：`per_device_batch_size × num_gpus × gradient_accumulation`。
+多卡训练的 batch_size 计算：`per_device_batch_size × num_gpus × gradient_accumulation`
 
 ## Packing（序列打包）
 
-把多个短训练样本拼成一条长序列，提升 GPU 利用率。
+把多个短训练样本拼成一条长序列，提升 GPU 利用率
 
 ```
 适用场景:
-  ✅ CPT（文本段落通常 < max_length）
-  ✅ 短问答（平均 < 500 tokens, max_length=4096）
-  ❌ 长文本（平均 > 2048 tokens, 浪费 token 去拼接）
-  ❌ 严格需要 attention mask 的场景（packing 会干扰 mask）
+  [OK] CPT（文本段落通常 < max_length）
+  [OK] 短问答（平均 < 500 tokens, max_length=4096）
+  [FAIL] 长文本（平均 > 2048 tokens, 浪费 token 去拼接）
+  [FAIL] 严格需要 attention mask 的场景（packing 会干扰 mask）
 
 效果:  短数据场景下吞吐量提升 3-10×
 代价:  实现复杂度增加（需要正确构造 position_ids 和 attention_mask）
@@ -677,29 +735,32 @@ PEFT 库方式: 使用 ConstantLengthDataset 或 SFTTrainer 的 packing=True
 
 ## 参考资料
 
-六个参考文件 + 三个可执行脚本，按需加载：
+七个参考文件 + 五个可执行脚本，按需加载：
 
 ### 参考文档
 
-- **model-catalog.md** — 精确模型规格（hidden_dim、layers、vocab）。显存计算前必须查。
-- **recipes.md** — 预置配方（chat/code/math/roleplay）。用户不想调参时直接套用。
-- **vram-reference.md** — 常见模型显存快速参考。给用户一个大致数字时用。
-- **faq.md** — 原理性问答。用户问"为什么 r=8"、"LoRA 和全量微调什么区别"时查。
+- **model-catalog.md** — 精确模型规格（hidden_dimlayersvocab）显存计算前必须查
+- **recipes.md** — 预置配方（chat/code/math/roleplay）用户不想调参时直接套用
+- **vram-reference.md** — 常见模型显存快速参考给用户一个大致数字时用
+- **faq.md** — 原理性问答用户问"为什么 r=8""LoRA 和全量微调什么区别"时查
+- **cpt-guide.md** — 继续预训练完整指南（参数差异、数据格式、执行流程）
+- **packing-guide.md** — 序列打包详细说明（适用场景、实现方式、注意事项）
+- **TRIGGERS.md** — 穷举所有调用方式（斜杠命令 + 中英文自然语言）
 
 加载方式：
 **Read** `${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/references/<文件名>`
 
 ### 可执行脚本（开箱即用）
 
-- **scripts/train_qlora.py** — 完整 QLoRA 训练脚本，改两行路径就能跑
-- **scripts/inference.py** — LoRA 模型推理（交互式 / 单次 / 批量）
-- **scripts/check_env.py** — 一键环境检测（CUDA、PyTorch、依赖、显存、国内镜像）
+| 脚本 | 用途 | 依赖 |
+|------|------|------|
+| **scripts/train_qlora.py** | 完整 QLoRA 训练脚本（断点续训、OOM 恢复、数据校验、国内镜像） | PyTorch + ML 库 |
+| **scripts/inference.py** | LoRA 模型推理（交互式 / 单次 / 批量） | PyTorch + ML 库 |
+| **scripts/check_env.py** | 一键环境检测（CUDA/PyTorch/依赖/显存/国内镜像提示） | 无 (纯 Python) |
+| **scripts/validate_data.py** | JSONL 数据质量校验（格式检测/空字段/重复/token 估算/质量评分） | 无 (纯 Python) |
+| **scripts/memory_check.py** | 显存快速估算（模型/LoRA/激活/优化器明细 + GPU 兼容性对比） | 无 (纯 Python) |
 
-用户想要直接用而不是生成脚本时，从 `${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/scripts/` 复制对应文件。
-
-### 触发方式目录
-
-- **TRIGGERS.md** — 穷举所有调用方式（斜杠命令 + 中英文自然语言）。用户不知道怎么开口时直接发给用户看。
+后三个脚本无需安装任何 ML 库，有 Python 3.10+ 就能跑。用户想要直接用而不是生成脚本时，从 `${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/scripts/` 复制对应文件
 
 ---
 
@@ -707,9 +768,9 @@ PEFT 库方式: 使用 ConstantLengthDataset 或 SFTTrainer 的 packing=True
 
 这六条定义了你的工作质量底线：
 
-1. 先分析数据，再推荐参数。
-2. 先计算显存，再确认 batch size。
-3. 每个推荐参数给出理由。
-4. 生成脚本前获取用户确认。
-5. 数据问题优先暴露，不隐藏。
-6. 能动手就不动嘴——直接帮用户跑分析、算显存、生成脚本，不要只给命令让用户自己执行。
+1. 先分析数据，再推荐参数
+2. 先计算显存，再确认 batch size
+3. 每个推荐参数给出理由
+4. 生成脚本前获取用户确认
+5. 数据问题优先暴露，不隐藏
+6. 能动手就不动嘴——直接帮用户跑分析算显存生成脚本，不要只给命令让用户自己执行
