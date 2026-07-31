@@ -173,10 +173,12 @@ def build_github(dry_run=False):
 #
 # TRANSFORM_MAP rewrites source-relative paths to installed-relative paths.
 
+# Order matters: specific prefixes first, general last.
 TRANSFORM_MAP = {
-    "${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/scripts/": "${CLAUDE_PLUGIN_ROOT}/scripts/",
-    "${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/references/": "${CLAUDE_PLUGIN_ROOT}/references/",
+    "${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/": "${CLAUDE_PLUGIN_ROOT}/",
     "skills/lora-trainer/scripts/": "scripts/",
+    "skills/lora-trainer/references/": "references/",
+    "skills/lora-trainer/": "",  # catch-all: remove nested prefix (SKILL.md, TRIGGERS.md etc)
     "skills/lora-trainer/references/": "references/",
 }
 
@@ -249,8 +251,9 @@ def build_skillhub(dry_run=False):
     src_scripts = ROOT / "scripts"
     dst_root = ROOT / "skillhub"
 
-    # Step 1: Copy SKILL.md + TRIGGERS.md to root with path transformations
-    print("\n[skillhub] Step 1: Flattening SKILL.md + TRIGGERS.md to root (with path transform) ...")
+    # Step 1: Copy SKILL.md + TRIGGERS.md to root with path transformations.
+    # Also transform CLAUDE.md (architecture diagram uses nested paths in source).
+    print("\n[skillhub] Step 1: Flattening SKILL.md + TRIGGERS.md + CLAUDE.md (with path transform) ...")
     for stem in ["SKILL.md", "TRIGGERS.md"]:
         actions = copy_text_file_transformed(src_skill / stem, dst_root / stem, dry_run)
         all_actions.extend(actions)
@@ -259,6 +262,18 @@ def build_skillhub(dry_run=False):
                 print(f"  [{action}] {path}")
         else:
             print(f"  -> {stem} up to date")
+
+    # Transform CLAUDE.md in skillhub (not copied from project root — they differ).
+    # The skillhub CLAUDE.md describes the flat skill layout; the project one describes the full repo.
+    claude_dst = dst_root / "CLAUDE.md"
+    if claude_dst.exists():
+        actions = copy_text_file_transformed(claude_dst, claude_dst, dry_run)
+        all_actions.extend(actions)
+        if actions:
+            for action, path in actions:
+                print(f"  [{action}] {path}")
+        else:
+            print("  -> CLAUDE.md up to date")
 
     # Step 2: Copy references/ and skill-level scripts/ to skillhub root
     print("\n[skillhub] Step 2: Flattening references/ + scripts/ to root ...")
@@ -316,15 +331,30 @@ def build_skillhub(dry_run=False):
                     for action, path in actions:
                         print(f"  [{action}] {path}")
 
-    # Hooks and plugin config are copied as-is (no path transform needed)
+    # Hooks: session-start.sh is skillhub-maintained (differs from source version).
+    # Plugin config is copied as-is.
     for comp in ["hooks", ".claude-plugin"]:
         src_comp = ROOT / comp
-        if src_comp.exists():
-            actions = copy_tree(src_comp, dst_root / comp, ALWAYS_EXCLUDE, dry_run)
-            all_actions.extend(actions)
-            if actions:
-                for action, path in actions:
-                    print(f"  [{action}] {path}")
+        if not src_comp.exists():
+            continue
+        dst_comp = dst_root / comp
+        dst_comp.mkdir(parents=True, exist_ok=True)
+        for item in src_comp.iterdir():
+            if item.name == "session-start.sh":
+                # skillhub-maintained: skip, don't overwrite with source version
+                continue
+            if item.is_file():
+                actions = copy_single_file(item, dst_comp / item.name, dry_run)
+                all_actions.extend(actions)
+                if actions:
+                    for action, path in actions:
+                        print(f"  [{action}] {path}")
+            elif item.is_dir():
+                actions = copy_tree(item, dst_comp / item.name, ALWAYS_EXCLUDE, dry_run)
+                all_actions.extend(actions)
+                if actions:
+                    for action, path in actions:
+                        print(f"  [{action}] {path}")
 
     # Step 4: Remove stale skills/ subdirectory (legacy nesting) and excluded files
     print("\n[skillhub] Step 4: Cleaning skillhub/ ...")
