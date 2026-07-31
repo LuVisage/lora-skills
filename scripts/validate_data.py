@@ -138,10 +138,10 @@ def validate(filepath, show_issues=False, show_samples=0):
             elif isinstance(val, str):
                 text += val
 
-        # CJK characters ~2 tokens/char, others ~0.28 tokens/char
-        cjk_chars = len(re.findall(r'[一-鿿㐀-䶿\U00020000-\U0002a6df]', text))
+        # CJK characters ~2 tokens/char, others ~0.3 tokens/char
+        cjk_chars = len(re.findall(r'[一-鿿㐀-䶿぀-ヿ가-힯\U00020000-\U0002a6df]', text))
         other_chars = len(text) - cjk_chars
-        est_tokens = int(cjk_chars * 2.0 + other_chars * 0.28)
+        est_tokens = int(cjk_chars * 2.0 + other_chars * 0.3)
         lengths.append(est_tokens)
 
     lengths_sorted = sorted(lengths)

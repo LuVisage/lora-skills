@@ -62,8 +62,10 @@ def main():
             all_ok &= check("nvidia-smi", False, "", "安装 NVIDIA 驱动: https://nvidia.com/drivers")
     except FileNotFoundError:
         all_ok &= check("nvidia-smi", False, "未找到 nvidia-smi", "安装 NVIDIA 驱动: https://nvidia.com/drivers")
-    except Exception:
-        print("  [WARN] nvidia-smi 检测失败（可能无 GPU）")
+    except subprocess.TimeoutExpired:
+        print("  [WARN] nvidia-smi 超时（GPU 可能正忙），跳过 GPU 信息检测")
+    except Exception as e:
+        print("  [WARN] nvidia-smi 检测失败: {}".format(e))
 
     #  3. PyTorch
     try:
@@ -121,8 +123,14 @@ def main():
                         status = "[OK] 充裕"
 
                     print(f"   GPU {i}: {free_gb:.1f}/{total_gb:.1f} GB 可用 ({used_pct:.0f}% 占用) — {status}")
-    except Exception:
-        pass
+    except subprocess.TimeoutExpired:
+        print("  [WARN] nvidia-smi 显存查询超时（GPU 可能正忙）")
+    except (ValueError, IndexError):
+        print("  [WARN] nvidia-smi 输出格式异常，无法解析显存信息")
+    except FileNotFoundError:
+        pass  # nvidia-smi not installed (already handled above)
+    except Exception as e:
+        print("  [WARN] 显存查询失败: {}".format(e))
 
     #  6. 国内用户网络提示
     hf_endpoint = os.environ.get("HF_ENDPOINT", "")

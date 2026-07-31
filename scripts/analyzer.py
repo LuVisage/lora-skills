@@ -19,11 +19,21 @@ class DataAnalyzer:
     def _load_data(self) -> List[Dict]:
         """加载 JSONL 数据，每行一个 JSON 对象"""
         data = []
+        errors = []
         with open(self.data_path, "r", encoding="utf-8") as f:
-            for line in f:
+            for line_num, line in enumerate(f, 1):
                 line = line.strip()
                 if line:
-                    data.append(json.loads(line))
+                    try:
+                        data.append(json.loads(line))
+                    except json.JSONDecodeError as e:
+                        errors.append("Line {}: {}".format(line_num, e))
+        if errors:
+            print("[WARN] {} parse error(s) in {}:".format(len(errors), self.data_path))
+            for err in errors[:3]:
+                print("  - {}".format(err))
+            if len(errors) > 3:
+                print("  ... and {} more".format(len(errors) - 3))
         return data
 
     #  Token 估算
@@ -32,7 +42,7 @@ class DataAnalyzer:
         """估算文本的 token 数量（不加载 tokenizer 的近似方法）
 
         中文/日/韩字符  2.0 tokens/字（大多数 tokenizer 的行为）
-        英文/数字  0.28 tokens/字符（~3.5 字符/token）
+        英文/数字  0.3 tokens/字符（~3.5 字符/token）
         混合文本按字符分类加权估算
         """
         if not text:
@@ -41,12 +51,16 @@ class DataAnalyzer:
         cjk_count = 0
         other_count = 0
         for ch in text:
-            if '一' <= ch <= '鿿' or '' <= ch <= '' or '가' <= ch <= '힯':
+            # Chinese ideographs (CJK Unified + Extension A/B), Japanese Kana, Korean Hangul
+            if ('一' <= ch <= '鿿' or '㐀' <= ch <= '䶿' or      # CJK Unified + Extension A
+                '぀' <= ch <= 'ヿ' or                       # Hiragana + Katakana
+                '가' <= ch <= '힯' or                       # Hangul Syllables
+                '\U00020000' <= ch <= '\U0002a6df'):                # CJK Extension B
                 cjk_count += 1
             else:
                 other_count += 1
 
-        return cjk_count * 2.0 + other_count * 0.28
+        return cjk_count * 2.0 + other_count * 0.3
 
     #  文本提取
 

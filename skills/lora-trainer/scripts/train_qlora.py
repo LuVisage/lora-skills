@@ -321,12 +321,19 @@ def load_model_and_tokenizer():
             bnb_4bit_use_double_quant=True,
         )
 
+        # Try flash_attention_2, fall back to sdpa (PyTorch 2.0 built-in) if not installed
+        try:
+            import flash_attn
+            attn_impl = "flash_attention_2"
+        except ImportError:
+            attn_impl = "sdpa"
+
         model = AutoModelForCausalLM.from_pretrained(
             MODEL_NAME,
             quantization_config=bnb_config,
             device_map="auto",
             trust_remote_code=True,
-            attn_implementation="flash_attention_2",
+            attn_implementation=attn_impl,
         )
     except Exception as e:
         msg = str(e)
@@ -482,6 +489,8 @@ def train(model, tokenizer, tokenized_dataset):
             import gc
             gc.collect()
             torch.cuda.empty_cache()
+            # Reload model from scratch to avoid stale gradient state
+            model, tokenizer = load_model_and_tokenizer()
 
         total_steps = max(1, (num_samples // (current_batch_size * GRAD_ACCUM)) * EPOCHS)
         warmup = min(max(10, total_steps // 10), max(1, total_steps - 1))
@@ -562,7 +571,7 @@ def train(model, tokenizer, tokenized_dataset):
 
     # Save training config for reproducibility
     config_path = os.path.join(OUTPUT_DIR, "training_config.json")
-    with open(config_path, "w") as f:
+    with open(config_path, "w", encoding="utf-8") as f:
         json.dump({
             "model_name": MODEL_NAME,
             "data_path": DATA_PATH,

@@ -18,9 +18,19 @@ allowed-tools: Read, Bash(python *)
 
 ## 执行步骤
 
-1. 查 `${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/references/model-catalog.md` 获取模型规格
+1. 查 `${CLAUDE_PLUGIN_ROOT}/references/model-catalog.md` 获取模型规格
 2. 确定 target_modules 数量（chat=2, code=4, math=5, roleplay=1）
-3. 运行 `${CLAUDE_PLUGIN_ROOT}/scripts/memory_calc.py` 精确计算（传入 num_modules）
+3. 精确计算显存（使用 import 模式调用脚本）：
+   ```
+   python -c "
+   import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}')
+   from scripts.memory_calc import MemoryCalculator
+   calc = MemoryCalculator(model_name='<MODEL>', seq_length=2048, batch_size=4, lora_r=8)
+   result = calc.get_total(quantized=True, num_modules=<N>, gradient_checkpoint=True)
+   import json
+   print(json.dumps(result, ensure_ascii=False, indent=2))
+   "
+   ```
 4. 逐项列出：模型权重激活值优化器开销总计
 5. 对比需求 vs 用户显卡容量，给出 verdict
 6. 推荐安全的 batch_size 和 gradient_accumulation 组合

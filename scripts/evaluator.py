@@ -16,11 +16,19 @@ class Evaluator:
     def _load_test_cases(self) -> List[Dict]:
         """加载测试数据"""
         data = []
+        errors = []
         with open(self.data_path, "r", encoding="utf-8") as f:
-            for line in f:
+            for line_num, line in enumerate(f, 1):
                 line = line.strip()
                 if line:
-                    data.append(json.loads(line))
+                    try:
+                        data.append(json.loads(line))
+                    except json.JSONDecodeError as e:
+                        errors.append("Line {}: {}".format(line_num, e))
+        if errors:
+            print("[WARN] {} parse error(s) in {}:".format(len(errors), self.data_path))
+            for err in errors[:3]:
+                print("  - {}".format(err))
         return data[:100]  # 最多评估 100 条
 
     def build_eval_prompts(self) -> List[str]:
@@ -105,10 +113,9 @@ def load_base_model():
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
     return model, tokenizer
 
-def load_lora_model():
+def load_lora_model(base_model, tokenizer):
     """加载 LoRA 微调后模型"""
-    base, tokenizer = load_base_model()
-    model = PeftModel.from_pretrained(base, LORA_PATH)
+    model = PeftModel.from_pretrained(base_model, LORA_PATH)
     model = model.merge_and_unload()
     model.eval()
     return model, tokenizer
@@ -129,7 +136,7 @@ def main():
     print("加载基座模型...")
     base_model, tokenizer = load_base_model()
     print("加载 LoRA 模型...")
-    lora_model, _ = load_lora_model()
+    lora_model, _ = load_lora_model(base_model, tokenizer)
 
     # 评估
     results = []

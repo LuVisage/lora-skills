@@ -158,9 +158,12 @@ def cook(
                 console.print(f"[dim] 检测到 GPU 显存: {gpu:.0f} GB[/dim]")
             else:
                 gpu = 24
-        except Exception:
+        except (subprocess.TimeoutExpired, FileNotFoundError):
             gpu = 24
             console.print("[dim][WARN] 未检测到 GPU，默认 24GB[/dim]")
+        except (ValueError, IndexError) as e:
+            gpu = 24
+            console.print("[dim][WARN] nvidia-smi 输出格式异常 ({}), 默认 24GB[/dim]".format(e))
 
     #  Step 4: 推荐参数
     console.print("[dim] 推荐参数...[/dim]")

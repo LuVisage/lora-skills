@@ -75,12 +75,15 @@ def estimate_memory(model_name, seq_length=2048, batch_size=4, lora_rank=8, num_
     """
     spec = MODEL_DB.get(model_name)
     if spec is None:
-        # Fuzzy match
+        # Fuzzy match: collect all substring matches, pick closest to 7B params
+        matches = []
         for key in MODEL_DB:
             if model_name.lower() in key.lower():
-                spec = MODEL_DB[key]
-                model_name = key
-                break
+                matches.append((key, MODEL_DB[key]))
+        if matches:
+            matches.sort(key=lambda m: abs(m[1].get("params", 0) - 7e9))
+            best_key, spec = matches[0]
+            model_name = best_key
         if spec is None:
             return None
 

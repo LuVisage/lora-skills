@@ -72,20 +72,36 @@ def load_model():
     print(f" 加载模型: {BASE_MODEL}")
     print(f"   加载 LoRA: {LORA_PATH}")
 
-    base = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL,
-        device_map="auto",
-        trust_remote_code=True,
-        torch_dtype=torch.float16,
-    )
-    tokenizer = AutoTokenizer.from_pretrained(
-        BASE_MODEL,
-        trust_remote_code=True,
-    )
+    try:
+        base = AutoModelForCausalLM.from_pretrained(
+            BASE_MODEL,
+            device_map="auto",
+            trust_remote_code=True,
+            torch_dtype=torch.float16,
+        )
+    except Exception as e:
+        print(f"[FAIL] 基座模型加载失败: {e}")
+        print("  检查模型名或路径: {}".format(BASE_MODEL))
+        sys.exit(1)
+
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(
+            BASE_MODEL,
+            trust_remote_code=True,
+        )
+    except Exception as e:
+        print(f"[FAIL] Tokenizer 加载失败: {e}")
+        sys.exit(1)
+
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = PeftModel.from_pretrained(base, LORA_PATH)
+    try:
+        model = PeftModel.from_pretrained(base, LORA_PATH)
+    except Exception as e:
+        print(f"[FAIL] LoRA adapter 加载失败: {e}")
+        print("  检查 LoRA 路径是否正确: {}".format(LORA_PATH))
+        sys.exit(1)
 
     if MERGE_WEIGHTS:
         print("   合并 LoRA 权重到基座模型...")

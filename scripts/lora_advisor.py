@@ -120,7 +120,7 @@ class LoRAAdvisor:
         # 大模型（ 13B）额外加 o_proj
         large_sizes = {13, 14, 20, 34, 67, 70, 72, 123, 405}
         try:
-            size_b = int(self.model_size.replace("b", ""))
+            size_b = int(self.model_size.lower().replace("b", ""))
         except ValueError:
             size_b = 7  # 默认 7B
         if size_b in large_sizes and "o_proj" not in modules:

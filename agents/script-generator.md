@@ -23,7 +23,17 @@ allowed-tools: Read, Write, Bash(python *)
 
 ## 执行步骤
 
-1. 调用 `${CLAUDE_PLUGIN_ROOT}/scripts/script_builder.py` 生成所有文件
+1. 生成脚本（使用 import 模式调用）：
+   ```
+   python -c "
+   import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}')
+   from scripts.script_builder import ScriptBuilder
+   builder = ScriptBuilder(model_name='<MODEL>', data_path='<DATA>', config={<CONFIG>})
+   result = builder.build_all(output_dir='./output')
+   import json
+   print(json.dumps(result, ensure_ascii=False, indent=2))
+   "
+   ```
 2. 验证每个生成文件语法正确：`python -m py_compile <file>`
 3. 检查关键配置项是否嵌入脚本：BitsAndBytesConfig(load_in_4bit=True)LoRA config数据集路径占位符
 4. 返回所有生成文件的路径列表

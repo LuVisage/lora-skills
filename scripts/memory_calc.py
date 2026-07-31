@@ -99,6 +99,7 @@ class MemoryCalculator:
             self.total_params = model_params
         else:
             # 默认 7B
+            print("[WARN] 未识别模型名，使用默认 7B 配置（结果可能有偏差）")
             self.model_params = 7e9
             self.hidden_dim = 4096
             self.num_layers = 32
@@ -164,7 +165,7 @@ class MemoryCalculator:
 
     #  各项显存计算
 
-    def calc_model_memory(self, quantized: bool = False) -> float:
+    def calc_model_memory(self, quantized: bool = False, num_modules: int = 1) -> float:
         """模型权重显存 (GB)"""
         if quantized:
             bytes_per_param = 0.5  # 4-bit
@@ -174,8 +175,8 @@ class MemoryCalculator:
         # 基座模型
         base = self.model_params * bytes_per_param / 1e9
 
-        # LoRA 参数：每层 2 个 adapter 矩阵 (A 和 B)
-        lora_params_per_layer = 2 * self.lora_r * self.hidden_dim
+        # LoRA 参数：每层 num_modules 个 adapter 矩阵 (A 和 B)
+        lora_params_per_layer = 2 * self.lora_r * self.hidden_dim * num_modules
         lora_total = self.num_layers * lora_params_per_layer * 2 / 1e9  # FP16
 
         return base + lora_total
@@ -207,7 +208,7 @@ class MemoryCalculator:
         num_modules: LoRA 目标模块数量
           聊天 [q,v] = 2, 代码 [q,k,v,o] = 4, 数学 [q,v,up,down,gate] = 5, 角色扮演 [v] = 1
         """
-        model_mem = self.calc_model_memory(quantized)
+        model_mem = self.calc_model_memory(quantized, num_modules)
         act_mem = self.calc_activation_memory(gradient_checkpoint)
         optim_mem = self.calc_optimizer_memory()
 

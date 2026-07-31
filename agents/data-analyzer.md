@@ -19,7 +19,16 @@ allowed-tools: Read, Bash(python *), Glob
 ## 执行步骤
 
 1. 验证文件是合法 JSONL（每行一个 JSON）
-2. 运行 `${CLAUDE_PLUGIN_ROOT}/scripts/analyzer.py` 分析数据
+2. 分析数据（使用 import 模式调用脚本）：
+   ```
+   python -c "
+   import sys; sys.path.insert(0, '${CLAUDE_PLUGIN_ROOT}')
+   from scripts.analyzer import quick_analyze
+   import json
+   r = quick_analyze('<DATA_PATH>')
+   print(json.dumps(r, ensure_ascii=False, indent=2))
+   "
+   ```
 3. 提取关键指标：样本数长度分布空回复率重复率格式类型
 4. 判断质量等级：[OK] 良好 / [WARN] 有问题 / [FAIL] 严重问题
 5. 返回结构化诊断结果
