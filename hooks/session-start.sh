@@ -8,7 +8,15 @@ HOOK_NAME="${1:-}"
 case "$HOOK_NAME" in
   session-start)
     # Read the skill's auto-activation description for the agent's context
-    SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)/skills/lora-trainer"
+    HOOK_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+    # Support both source layout (skills/lora-trainer/) and installed layout (flat root)
+    if [ -f "$HOOK_ROOT/skills/lora-trainer/SKILL.md" ]; then
+      SKILL_DIR="$HOOK_ROOT/skills/lora-trainer"
+    elif [ -f "$HOOK_ROOT/SKILL.md" ]; then
+      SKILL_DIR="$HOOK_ROOT"
+    else
+      SKILL_DIR="$HOOK_ROOT/skills/lora-trainer"  # default: source layout
+    fi
     if [ -f "$SKILL_DIR/SKILL.md" ]; then
       # Extract YAML frontmatter description as context hint
       DESCRIPTION=$(sed -n '/^---$/,/^---$/p' "$SKILL_DIR/SKILL.md" | grep "^description:" | sed 's/^description:\s*//' | sed 's/>-//' | tr '\n' ' ' | sed 's/  */ /g')

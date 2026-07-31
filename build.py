@@ -163,6 +163,63 @@ def build_github(dry_run=False):
     return all_actions
 
 
+# ---------------------------------------------------------------------------
+# SkillHub path transformation
+# ---------------------------------------------------------------------------
+# In the GitHub source (project context), paths use:
+#   ${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/scripts/...
+# In the SkillHub install (flat context), paths must use:
+#   ${CLAUDE_PLUGIN_ROOT}/scripts/...
+#
+# TRANSFORM_MAP rewrites source-relative paths to installed-relative paths.
+
+TRANSFORM_MAP = {
+    "${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/scripts/": "${CLAUDE_PLUGIN_ROOT}/scripts/",
+    "${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/references/": "${CLAUDE_PLUGIN_ROOT}/references/",
+    "skills/lora-trainer/scripts/": "scripts/",
+    "skills/lora-trainer/references/": "references/",
+}
+
+# Project-level computation scripts that the skill agents depend on.
+# These live at repo-root scripts/ but must be included in the skill package
+# so that agents can call them in the installed (SkillHub) context.
+AGENT_SCRIPTS = [
+    "analyzer.py",
+    "memory_calc.py",
+    "lora_advisor.py",
+    "script_builder.py",
+    "evaluator.py",
+]
+
+
+def _transform_text(content):
+    """Apply SkillHub path transformations to text content."""
+    for old, new in TRANSFORM_MAP.items():
+        content = content.replace(old, new)
+    return content
+
+
+def copy_text_file_transformed(src, dst, dry_run=False):
+    """Copy a text file with SkillHub path transformations.
+    Returns list of (action, path) tuples."""
+    if not src.exists():
+        return []
+    with open(str(src), "r", encoding="utf-8") as f:
+        original = f.read()
+    transformed = _transform_text(original)
+    if dst.exists():
+        with open(str(dst), "r", encoding="utf-8") as f:
+            existing = f.read()
+        if existing == transformed:
+            return []
+    rel = dst.relative_to(ROOT)
+    if not dry_run:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        with open(str(dst), "w", encoding="utf-8", newline="\n") as f:
+            f.write(transformed)
+    return [("COPY+TRANSFORM", str(rel))]
+
+
 def copy_single_file(src, dst, dry_run=False):
     """Copy a single file from src to dst if content differs.
     Returns list of (action, path) tuples."""
@@ -183,15 +240,19 @@ def build_skillhub(dry_run=False):
     SkillHub requires a flat structure with SKILL.md at root.  We flatten the
     nested skills/lora-trainer/ layout so that scripts/, references/, and
     TRIGGERS.md sit alongside commands/, agents/, and hooks/ at the root.
+
+    Paths in text files are transformed so that ${CLAUDE_PLUGIN_ROOT} references
+    work correctly both in the GitHub source (nested) and installed (flat) contexts.
     """
     all_actions = []
     src_skill = ROOT / "skills" / "lora-trainer"
+    src_scripts = ROOT / "scripts"
     dst_root = ROOT / "skillhub"
 
-    # Step 1: Copy SKILL.md to root (the single source of truth for SkillHub overview)
-    print("\n[skillhub] Step 1: Flattening SKILL.md + TRIGGERS.md to root ...")
+    # Step 1: Copy SKILL.md + TRIGGERS.md to root with path transformations
+    print("\n[skillhub] Step 1: Flattening SKILL.md + TRIGGERS.md to root (with path transform) ...")
     for stem in ["SKILL.md", "TRIGGERS.md"]:
-        actions = copy_single_file(src_skill / stem, dst_root / stem, dry_run)
+        actions = copy_text_file_transformed(src_skill / stem, dst_root / stem, dry_run)
         all_actions.extend(actions)
         if actions:
             for action, path in actions:
@@ -199,9 +260,9 @@ def build_skillhub(dry_run=False):
         else:
             print(f"  -> {stem} up to date")
 
-    # Step 2: Copy references/ and scripts/ to skillhub root
+    # Step 2: Copy references/ and skill-level scripts/ to skillhub root
     print("\n[skillhub] Step 2: Flattening references/ + scripts/ to root ...")
-    for sub in ["references", "scripts"]:
+    for sub in ["references"]:
         src_sub = src_skill / sub
         if not src_sub.exists():
             continue
@@ -214,9 +275,49 @@ def build_skillhub(dry_run=False):
         else:
             print(f"  -> {sub}/ up to date")
 
-    # Step 3: Sync commands/, agents/, hooks/, .claude-plugin/ -> skillhub root
-    print("\n[skillhub] Step 3: Syncing commands/agents/hooks/plugin -> skillhub/ ...")
-    for comp in ["commands", "agents", "hooks", ".claude-plugin"]:
+    # Copy skill-level scripts
+    actions = copy_tree(src_skill / "scripts", dst_root / "scripts", {"__pycache__"}, dry_run)
+    all_actions.extend(actions)
+    if actions:
+        for action, path in actions:
+            print(f"  [{action}] {path}")
+        print(f"  -> {len(actions)} change(s) in scripts/")
+    else:
+        print("  -> scripts/ up to date")
+
+    # Step 2b: Copy project-level computation scripts needed by agents
+    print("\n[skillhub] Step 2b: Adding agent computation scripts ...")
+    for script_name in AGENT_SCRIPTS:
+        src_file = src_scripts / script_name
+        dst_file = dst_root / "scripts" / script_name
+        if not src_file.exists():
+            continue
+        actions = copy_single_file(src_file, dst_file, dry_run)
+        all_actions.extend(actions)
+        if actions:
+            for action, path in actions:
+                print(f"  [{action}] {path}")
+        else:
+            print(f"  -> {script_name} up to date")
+
+    # Step 3: Sync commands/, agents/ (with path transform), hooks/, .claude-plugin/
+    print("\n[skillhub] Step 3: Syncing commands/agents/hooks/plugin (with path transform) ...")
+    # Commands and agents need path transformation
+    for comp in ["commands", "agents"]:
+        src_comp = ROOT / comp
+        if not src_comp.exists():
+            continue
+        dst_comp = dst_root / comp
+        for item in src_comp.iterdir():
+            if item.is_file() and item.suffix in (".md", ".json"):
+                actions = copy_text_file_transformed(item, dst_comp / item.name, dry_run)
+                all_actions.extend(actions)
+                if actions:
+                    for action, path in actions:
+                        print(f"  [{action}] {path}")
+
+    # Hooks and plugin config are copied as-is (no path transform needed)
+    for comp in ["hooks", ".claude-plugin"]:
         src_comp = ROOT / comp
         if src_comp.exists():
             actions = copy_tree(src_comp, dst_root / comp, ALWAYS_EXCLUDE, dry_run)
