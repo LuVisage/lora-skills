@@ -14,7 +14,7 @@ allowed-tools: Read, Bash(python *), Glob
 
 # /lora:check-data — 数据质量扫描
 
-只看数据质量，不做参数推荐，不生成脚本。适合在决定微调前快速摸底。
+只看数据质量，不做参数推荐，不生成脚本适合在决定微调前快速摸底
 
 ## 参数
 
@@ -34,7 +34,7 @@ allowed-tools: Read, Bash(python *), Glob
 
 ## 输出
 
-- 样本总量、格式类型
+- 样本总量格式类型
 - 长度分布（min / avg / p95 / max）
 - 空回复数及占比（> 5% 红色警告）
 - 重复对数量（> 10% 红色警告）
@@ -42,4 +42,4 @@ allowed-tools: Read, Bash(python *), Glob
 
 ## 执行
 
-加载 lora-trainer skill 的数据分析能力，但不执行 Step 3-5（显存、参数、脚本）。
+加载 lora-trainer skill 的数据分析能力，但不执行 Step 3-5（显存参数脚本）

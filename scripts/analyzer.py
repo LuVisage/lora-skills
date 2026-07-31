@@ -1,5 +1,5 @@
 """
-数据分析模块 — 读取 JSONL 数据，检查质量，生成统计报告。
+数据分析模块 — 读取 JSONL 数据，检查质量，生成统计报告
 """
 
 import json
@@ -7,18 +7,17 @@ from collections import Counter
 from typing import Dict, List, Tuple
 import numpy as np
 
-
 class DataAnalyzer:
-    """加载并分析 JSONL 格式的微调数据。"""
+    """加载并分析 JSONL 格式的微调数据"""
 
     def __init__(self, data_path: str):
         self.data_path = data_path
         self.data = self._load_data()
 
-    # ── 数据加载 ───────────────────────────────────────────
+    #  数据加载
 
     def _load_data(self) -> List[Dict]:
-        """加载 JSONL 数据，每行一个 JSON 对象。"""
+        """加载 JSONL 数据，每行一个 JSON 对象"""
         data = []
         with open(self.data_path, "r", encoding="utf-8") as f:
             for line in f:
@@ -27,14 +26,14 @@ class DataAnalyzer:
                     data.append(json.loads(line))
         return data
 
-    # ── Token 估算 ─────────────────────────────────────────
+    #  Token 估算
 
     def _estimate_tokens(self, text: str) -> float:
-        """估算文本的 token 数量（不加载 tokenizer 的近似方法）。
+        """估算文本的 token 数量（不加载 tokenizer 的近似方法）
 
-        中文/日/韩字符 ≈ 2.0 tokens/字（大多数 tokenizer 的行为）。
-        英文/数字 ≈ 0.28 tokens/字符（~3.5 字符/token）。
-        混合文本按字符分类加权估算。
+        中文/日/韩字符  2.0 tokens/字（大多数 tokenizer 的行为）
+        英文/数字  0.28 tokens/字符（~3.5 字符/token）
+        混合文本按字符分类加权估算
         """
         if not text:
             return 0.0
@@ -42,17 +41,17 @@ class DataAnalyzer:
         cjk_count = 0
         other_count = 0
         for ch in text:
-            if '一' <= ch <= '鿿' or '぀' <= ch <= 'ヿ' or '가' <= ch <= '힯':
+            if '一' <= ch <= '鿿' or '' <= ch <= '' or '가' <= ch <= '힯':
                 cjk_count += 1
             else:
                 other_count += 1
 
         return cjk_count * 2.0 + other_count * 0.28
 
-    # ── 文本提取 ───────────────────────────────────────────
+    #  文本提取
 
     def _extract_full_text(self, item: Dict) -> str:
-        """根据数据格式提取完整训练文本，用于长度分析。"""
+        """根据数据格式提取完整训练文本，用于长度分析"""
         # messages 格式
         if "messages" in item and isinstance(item["messages"], list):
             return " ".join(msg.get("content", "") for msg in item["messages"])
@@ -66,7 +65,7 @@ class DataAnalyzer:
         return item.get("instruction", "") + " " + item.get("output", "")
 
     def _extract_output_text(self, item: Dict) -> str:
-        """提取回复/输出部分，用于质量检查。"""
+        """提取回复/输出部分，用于质量检查"""
         # messages 格式：最后一条 assistant 消息
         if "messages" in item and isinstance(item["messages"], list):
             for msg in reversed(item["messages"]):
@@ -83,10 +82,10 @@ class DataAnalyzer:
         # instruction-output 格式（默认）
         return item.get("output", "")
 
-    # ── 长度分析 ───────────────────────────────────────────
+    #  长度分析
 
     def analyze_length_distribution(self) -> Dict:
-        """分析训练文本的字符长度和估算 token 长度分布。"""
+        """分析训练文本的字符长度和估算 token 长度分布"""
         char_lengths = []
         token_lengths = []
         for item in self.data:
@@ -117,10 +116,10 @@ class DataAnalyzer:
             "note": "token 数为基于字符类型的近似估算，精确值需用 tokenizer 计算",
         }
 
-    # ── 质量检查 ───────────────────────────────────────────
+    #  质量检查
 
     def check_data_quality(self) -> Dict:
-        """扫描数据中的常见问题：空回复、重复、控制字符。"""
+        """扫描数据中的常见问题：空回复重复控制字符"""
         issues = []
 
         if not self.data:
@@ -182,10 +181,10 @@ class DataAnalyzer:
             "bilingual_ratio": round(bilingual / len(self.data), 4),
         }
 
-    # ── 字段检测 ───────────────────────────────────────────
+    #  字段检测
 
     def detect_format(self) -> Dict:
-        """自动检测数据格式（instruction/output 还是 messages 格式）。"""
+        """自动检测数据格式（instruction/output 还是 messages 格式）"""
         if not self.data:
             return {"format": "unknown", "fields": []}
 
@@ -201,32 +200,32 @@ class DataAnalyzer:
         else:
             return {"format": "unknown", "fields": fields}
 
-    # ── 报告生成 ───────────────────────────────────────────
+    #  报告生成
 
     def generate_report(self) -> str:
-        """生成人类可读的数据分析报告。"""
+        """生成人类可读的数据分析报告"""
         length_stats = self.analyze_length_distribution()
         quality_stats = self.check_data_quality()
         fmt = self.detect_format()
 
         lines = [
-            "📊 数据报告",
+            " 数据报告",
             "=" * 40,
             f"总样本数: {length_stats['total_samples']}",
             f"数据格式: {fmt['format']}",
             f"字段: {', '.join(fmt['fields'])}",
             "",
-            "📏 完整文本字符长度:",
+            " 完整文本字符长度:",
             f"  最短: {length_stats['min']} | 最长: {length_stats['max']}",
             f"  平均: {length_stats['mean']} | 中位数: {length_stats['median']}",
             f"  P80: {length_stats['percentile_80']} | P95: {length_stats['percentile_95']}",
             "",
-            "📐 估算 Token 长度 (基于字符类型近似):",
+            " 估算 Token 长度 (基于字符类型近似):",
             f"  中位数: {length_stats['estimated_median_tokens']} tokens",
             f"  P95: {length_stats['estimated_p95_tokens']} tokens",
-            f"  建议 max_seq_length ≥ {length_stats['estimated_p95_tokens']} (P95 × 1.0)",
+            f"  建议 max_seq_length  {length_stats['estimated_p95_tokens']} (P95 × 1.0)",
             "",
-            "🔍 质量检查:",
+            " 质量检查:",
             f"  空回复比例: {quality_stats['empty_output_ratio'] * 100:.1f}%",
             f"  重复率: {quality_stats['duplicate_ratio'] * 100:.1f}%",
             f"  中英混合: {quality_stats['bilingual_ratio'] * 100:.1f}%",
@@ -234,21 +233,19 @@ class DataAnalyzer:
 
         if quality_stats["issues"]:
             lines.append("")
-            lines.append("⚠️ 发现的问题:")
+            lines.append("[WARN] 发现的问题:")
             for issue in quality_stats["issues"]:
                 lines.append(f"  - {issue}")
         else:
             lines.append("")
-            lines.append("✅ 数据质量良好！")
+            lines.append("[OK] 数据质量良好！")
 
         return "\n".join(lines)
 
-
-# ── 便捷函数（供 Skill 直接调用） ──────────────────────────
-
+#  便捷函数（供 Skill 直接调用）
 
 def quick_analyze(data_path: str) -> Dict:
-    """一行调用，返回所有分析结果。"""
+    """一行调用，返回所有分析结果"""
     analyzer = DataAnalyzer(data_path)
     return {
         "length": analyzer.analyze_length_distribution(),

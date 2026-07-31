@@ -37,7 +37,7 @@ from cli.main import main
 r = quick_analyze('examples/sample_data.jsonl')
 m = quick_calc('qwen2-7b')
 c = quick_recommend(r['length']['total_samples'], '7b', 'chat')
-print('✅ All OK')
+print('[OK] All OK')
 "
 
 # 2. Run all CLI commands
@@ -57,10 +57,10 @@ grep __version__ cli/__init__.py
 ## Versioning
 
 Follow [SemVer](https://semver.org/). Version is stored in 4 files — all must be updated together:
-- `pyproject.toml` → `version = "X.Y.Z"`
-- `package.json` → `"version": "X.Y.Z"`
-- `.claude-plugin/plugin.json` → `"version": "X.Y.Z"`
-- `cli/__init__.py` → `__version__ = "X.Y.Z"`
+- `pyproject.toml`  `version = "X.Y.Z"`
+- `package.json`  `"version": "X.Y.Z"`
+- `.claude-plugin/plugin.json`  `"version": "X.Y.Z"`
+- `cli/__init__.py`  `__version__ = "X.Y.Z"`
 
 ## Review Process
 

@@ -1,6 +1,6 @@
 # 显存快速参考
 
-以下为 QLoRA 4-bit 量化、seq_length=2048、batch_size=4、r=8 配置下的显存占用参考值。
+以下为 QLoRA 4-bit 量化seq_length=2048batch_size=4r=8 配置下的显存占用参考值
 
 ## 7B-9B 模型
 
@@ -55,8 +55,8 @@ Phi-3-small     ~4.0 GB
 
 ## 近似估算公式
 
-实际显存 ≈ 参考值 × (seq_length / 2048) × (batch_size / 4)
+实际显存  参考值 × (seq_length / 2048) × (batch_size / 4)
 
-示例：Qwen2-7B、seq=4096、bs=2 → 4.6 × 2 × 0.5 = 4.6 GB
+示例：Qwen2-7Bseq=4096bs=2  4.6 × 2 × 0.5 = 4.6 GB
 
-**注意：** 精确值必须用 `scripts/memory_calc.py` 计算。参考值不含 KV cache 和 gradient checkpointing 优化效果。
+**注意：** 精确值必须用 `scripts/memory_calc.py` 计算参考值不含 KV cache 和 gradient checkpointing 优化效果

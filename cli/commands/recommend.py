@@ -1,4 +1,4 @@
-"""lora-trainer recommend — 参数推荐命令。"""
+"""lora-trainer recommend — 参数推荐命令"""
 
 import json
 
@@ -9,7 +9,6 @@ from rich.table import Table
 from scripts.lora_advisor import quick_recommend
 
 console = Console()
-
 
 @click.command()
 @click.option(
@@ -51,7 +50,7 @@ def recommend(
     gpu: float,
     json_output: bool,
 ) -> None:
-    """⚙️ 根据数据量和任务类型推荐 LoRA 超参数。
+    """ 根据数据量和任务类型推荐 LoRA 超参数
 
     \b
     示例:
@@ -67,7 +66,7 @@ def recommend(
             gpu_memory_gb=gpu,
         )
     except Exception as e:
-        console.print(f"[red]❌ 推荐失败: {e}[/red]")
+        console.print(f"[red][FAIL] 推荐失败: {e}[/red]")
         raise SystemExit(1)
 
     if json_output:
@@ -75,11 +74,11 @@ def recommend(
         return
 
     # 富文本表格输出
-    task_labels = {"chat": "💬 通用对话", "code": "💻 代码", "math": "🧮 数学推理",
-                   "roleplay": "🎭 角色扮演", "cpt": "📚 继续预训练 (CPT)"}
+    task_labels = {"chat": " 通用对话", "code": " 代码", "math": " 数学推理",
+                   "roleplay": " 角色扮演", "cpt": " 继续预训练 (CPT)"}
     task_label = task_labels.get(task, task)
 
-    console.print(f"\n[bold cyan]⚙️ LoRA 参数推荐[/bold cyan]")
+    console.print(f"\n[bold cyan] LoRA 参数推荐[/bold cyan]")
     console.print(f"   任务: {task_label}  |  模型: {model}  |  样本: {samples:,}  |  GPU: {gpu} GB\n")
 
     table = Table(show_header=True, header_style="bold cyan")

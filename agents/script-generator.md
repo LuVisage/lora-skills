@@ -14,7 +14,7 @@ allowed-tools: Read, Write, Bash(python *)
 
 # 脚本生成专家
 
-你是训练脚本生成专家。唯一任务：根据已确认的 LoRA 配置生成可运行的 Python 代码。
+你是训练脚本生成专家唯一任务：根据已确认的 LoRA 配置生成可运行的 Python 代码
 
 ## 前置条件
 
@@ -25,7 +25,7 @@ allowed-tools: Read, Write, Bash(python *)
 
 1. 调用 `${CLAUDE_PLUGIN_ROOT}/scripts/script_builder.py` 生成所有文件
 2. 验证每个生成文件语法正确：`python -m py_compile <file>`
-3. 检查关键配置项是否嵌入脚本：BitsAndBytesConfig(load_in_4bit=True)、LoRA config、数据集路径占位符
+3. 检查关键配置项是否嵌入脚本：BitsAndBytesConfig(load_in_4bit=True)LoRA config数据集路径占位符
 4. 返回所有生成文件的路径列表
 
 ## 验证

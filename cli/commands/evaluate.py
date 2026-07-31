@@ -1,4 +1,4 @@
-"""lora-trainer evaluate — 评估脚本生成命令。"""
+"""lora-trainer evaluate — 评估脚本生成命令"""
 
 import json
 
@@ -11,7 +11,6 @@ from scripts.analyzer import DataAnalyzer
 
 console = Console()
 
-
 @click.command()
 @click.argument("data", type=click.Path(exists=True), metavar="TEST_DATA")
 @click.option(
@@ -19,7 +18,7 @@ console = Console()
     type=click.Choice(["instruction-output", "messages", "conversations", "auto"]),
     default="auto",
     show_default=True,
-    help="训练数据格式。auto = 自动检测",
+    help="训练数据格式auto = 自动检测",
 )
 @click.option(
     "--output", "-o",
@@ -40,11 +39,11 @@ def evaluate(
     output: str,
     json_output: bool,
 ) -> None:
-    """📏 生成 LoRA 模型评估脚本。
+    """ 生成 LoRA 模型评估脚本
 
-    TEST_DATA 为 JSONL 格式的测试数据文件。
+    TEST_DATA 为 JSONL 格式的测试数据文件
 
-    生成的脚本对比基座模型 vs LoRA 微调后模型的输出效果。
+    生成的脚本对比基座模型 vs LoRA 微调后模型的输出效果
 
     \b
     示例:
@@ -63,14 +62,14 @@ def evaluate(
                 "instruction-output": "instruction-output",
             }
             data_format = format_map.get(detected, "instruction-output")
-            console.print(f"[dim]🔍 检测到数据格式: {data_format}[/dim]")
+            console.print(f"[dim] 检测到数据格式: {data_format}[/dim]")
         except Exception:
             data_format = "instruction-output"
 
     try:
         evaluator = Evaluator(data, data_format=data_format)
     except Exception as e:
-        console.print(f"[red]❌ 加载测试数据失败: {e}[/red]")
+        console.print(f"[red][FAIL] 加载测试数据失败: {e}[/red]")
         raise SystemExit(1)
 
     if json_output:
@@ -84,11 +83,11 @@ def evaluate(
         with open(output, "w", encoding="utf-8") as f:
             f.write(script)
     except Exception as e:
-        console.print(f"[red]❌ 生成评估脚本失败: {e}[/red]")
+        console.print(f"[red][FAIL] 生成评估脚本失败: {e}[/red]")
         raise SystemExit(1)
 
     # 输出说明
-    console.print(f"\n[bold cyan]📏 评估脚本已生成[/bold cyan]")
+    console.print(f"\n[bold cyan] 评估脚本已生成[/bold cyan]")
     console.print(f"   文件: [green]{output}[/green]")
     console.print(f"   数据格式: [bold]{data_format}[/bold]")
 
@@ -97,6 +96,6 @@ def evaluate(
         f"2. 安装依赖: [dim]pip install torch transformers peft tqdm[/dim]\n"
         f"3. 运行: [dim]python {output}[/dim]\n"
         f"4. 查看结果: [dim]eval_results.json[/dim]",
-        title="📋 使用步骤",
+        title=" 使用步骤",
         border_style="cyan",
     ))

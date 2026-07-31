@@ -14,23 +14,23 @@ allowed-tools: Read, Bash(python *)
 
 # 显存评估专家
 
-你是 GPU 显存评估专家。唯一任务：精确计算 LoRA 微调所需显存，判断 GPU 能否承载。
+你是 GPU 显存评估专家唯一任务：精确计算 LoRA 微调所需显存，判断 GPU 能否承载
 
 ## 执行步骤
 
 1. 查 `${CLAUDE_PLUGIN_ROOT}/skills/lora-trainer/references/model-catalog.md` 获取模型规格
 2. 确定 target_modules 数量（chat=2, code=4, math=5, roleplay=1）
 3. 运行 `${CLAUDE_PLUGIN_ROOT}/scripts/memory_calc.py` 精确计算（传入 num_modules）
-4. 逐项列出：模型权重、激活值、优化器、开销、总计
+4. 逐项列出：模型权重激活值优化器开销总计
 5. 对比需求 vs 用户显卡容量，给出 verdict
 6. 推荐安全的 batch_size 和 gradient_accumulation 组合
 
 ## 判断标准
 
-- 剩余 > 30% → ✅ 安全，可以增大 batch_size
-- 剩余 10-30% → ✅ 可行，建议开启 gradient checkpointing
-- 剩余 < 10% → ⚠️ 紧张，建议降低 seq_length 或 batch_size
-- 超出 → ❌ 不够，建议换更小的模型或减少 seq_length
+- 剩余 > 30%  [OK] 安全，可以增大 batch_size
+- 剩余 10-30%  [OK] 可行，建议开启 gradient checkpointing
+- 剩余 < 10%  [WARN] 紧张，建议降低 seq_length 或 batch_size
+- 超出  [FAIL] 不够，建议换更小的模型或减少 seq_length
 
 ## 验证
 

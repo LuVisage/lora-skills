@@ -31,6 +31,12 @@ Thumbs.db
 # Playwright browser testing
 .playwright-mcp/
 
+# SkillHub upload folder (build artifact, not source)
+skillhub/
+
+# Documentation output
+docs/
+
 # Design docs (keep only README)
 优化方案-基于行业最佳实践.md
 设计文档-版本对比.md

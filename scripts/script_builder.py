@@ -1,5 +1,5 @@
 """
-训练脚本生成模块 — 根据推荐配置生成可直接运行的训练/推理脚本。
+训练脚本生成模块 — 根据推荐配置生成可直接运行的训练/推理脚本
 """
 
 import os
@@ -8,9 +8,8 @@ from typing import Dict
 
 import yaml
 
-
 class ScriptBuilder:
-    """根据 LoRA 配置生成训练脚本、推理脚本和配置文件。"""
+    """根据 LoRA 配置生成训练脚本推理脚本和配置文件"""
 
     def __init__(
         self,
@@ -27,13 +26,13 @@ class ScriptBuilder:
         self.task_type = task_type.lower()
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # ── 训练脚本 ────────────────────────────────────────────
+    #  训练脚本
 
     def _build_format_fn(self) -> str:
-        """根据数据格式生成对应的格式化函数代码。"""
+        """根据数据格式生成对应的格式化函数代码"""
         if self.data_format in ("messages", "conversations"):
             return '''def format_messages(example):
-    """将 messages 格式化为 ChatML 训练文本。"""
+    """将 messages 格式化为 ChatML 训练文本"""
     messages = example["messages"]
     # 使用 tokenizer 的 chat template（如果有的话）
     # 否则用通用 ChatML 格式
@@ -46,13 +45,13 @@ class ScriptBuilder:
     return {"text": text}'''
         elif self.data_format == "instruction-output":
             return '''def format_instruction(example):
-    """将 instruction/output 格式化为训练文本。"""
+    """将 instruction/output 格式化为训练文本"""
     text = f"### Instruction:\\n{example['instruction']}\\n\\n### Response:\\n{example['output']}"
     return {"text": text}'''
         else:
             # 未知格式：同时生成三种尝试
             return '''def format_auto(example):
-    """自动检测格式并转换。"""
+    """自动检测格式并转换"""
     if "messages" in example and isinstance(example["messages"], list):
         parts = []
         for msg in example["messages"]:
@@ -74,7 +73,7 @@ class ScriptBuilder:
     return {"text": text}'''
 
     def build_training_script(self) -> str:
-        """生成完整的 QLoRA 训练脚本。"""
+        """生成完整的 QLoRA 训练脚本"""
         r = self.config["rank"]["value"]
         alpha = self.config["alpha"]["value"]
         modules = self.config["target_modules"]["value"]
@@ -137,17 +136,17 @@ from peft import (
 from datasets import load_dataset, Dataset
 import os
 
-# ═══════════════════════════════════════════════════════════
+#
 # 配置区域 — 请根据实际情况修改以下路径
-# ═══════════════════════════════════════════════════════════
+#
 
 MODEL_NAME = "{{{{model_path}}}}"   # TODO: 模型路径或 HuggingFace ID
 DATA_PATH = "{{{{data_path}}}}"     # TODO: JSONL 数据文件路径
 OUTPUT_DIR = "{self.output_dir}/lora_{self.timestamp}"
 
-# ═══════════════════════════════════════════════════════════
+#
 # LoRA 配置（由 Skill 智能推荐）
-# ═══════════════════════════════════════════════════════════
+#
 
 LORA_CONFIG = LoraConfig(
     r={r},
@@ -158,9 +157,9 @@ LORA_CONFIG = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
 )
 
-# ═══════════════════════════════════════════════════════════
+#
 # 量化配置（QLoRA 4-bit）
-# ═══════════════════════════════════════════════════════════
+#
 
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -169,9 +168,9 @@ bnb_config = BitsAndBytesConfig(
     bnb_4bit_use_double_quant=True,
 )
 
-# ═══════════════════════════════════════════════════════════
+#
 # 训练参数
-# ═══════════════════════════════════════════════════════════
+#
 
 training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
@@ -197,11 +196,11 @@ training_args = TrainingArguments(
     report_to="none",
 )
 
-# ═══════════════════════════════════════════════════════════
+#
 # 加载模型
-# ═══════════════════════════════════════════════════════════
+#
 
-print("🔧 加载模型...")
+print(" 加载模型...")
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
     quantization_config=bnb_config,
@@ -224,11 +223,11 @@ model = prepare_model_for_kbit_training(model)
 model = get_peft_model(model, LORA_CONFIG)
 model.print_trainable_parameters()
 
-# ═══════════════════════════════════════════════════════════
+#
 # 加载数据
-# ═══════════════════════════════════════════════════════════
+#
 
-print("📊 加载数据...")
+print(" 加载数据...")
 
 {format_fn_code}
 
@@ -254,11 +253,11 @@ def tokenize(examples):
 
 tokenized = dataset.map(tokenize, batched=True, remove_columns=dataset["train"].column_names)
 
-# ═══════════════════════════════════════════════════════════
+#
 # 训练
-# ═══════════════════════════════════════════════════════════
+#
 
-print("🚀 开始训练...")
+print(" 开始训练...")
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, padding=True, return_tensors="pt")
 
 trainer = Trainer(
@@ -271,36 +270,36 @@ trainer = Trainer(
 
 trainer.train()
 
-# ═══════════════════════════════════════════════════════════
+#
 # 保存
-# ═══════════════════════════════════════════════════════════
+#
 
 adapter_path = os.path.join(OUTPUT_DIR, "final_adapter")
-print(f"💾 保存 LoRA 权重到 {{adapter_path}}...")
+print(f" 保存 LoRA 权重到 {{adapter_path}}...")
 model.save_pretrained(adapter_path)
 tokenizer.save_pretrained(adapter_path)
 
-print("✅ 训练完成！")
+print("[OK] 训练完成！")
 print(f"   LoRA 权重: {{adapter_path}}")
 print(f"   使用方式: model = PeftModel.from_pretrained(base_model, '{{adapter_path}}')")
 '''
         return script
 
-    # ── 推理脚本 ────────────────────────────────────────────
+    #  推理脚本
 
     def _build_inference_format_fn(self) -> str:
-        """根据训练数据格式生成对应的推理格式化代码。与训练时保持一致。"""
+        """根据训练数据格式生成对应的推理格式化代码与训练时保持一致"""
         if self.data_format in ("messages", "conversations"):
             return '''def format_prompt(prompt: str) -> str:
-    """构造 ChatML 格式 prompt（与训练时一致）。"""
+    """构造 ChatML 格式 prompt（与训练时一致）"""
     return f"<|user|>\\n{prompt}\\n<|assistant|>\\n"'''
         else:
             return '''def format_prompt(prompt: str) -> str:
-    """构造 Instruction 格式 prompt（与训练时一致）。"""
+    """构造 Instruction 格式 prompt（与训练时一致）"""
     return f"### Instruction:\\n{prompt}\\n\\n### Response:\\n"'''
 
     def build_inference_script(self) -> str:
-        """生成 LoRA 模型推理脚本。"""
+        """生成 LoRA 模型推理脚本"""
         format_fn_code = self._build_inference_format_fn()
         script = f'''#!/usr/bin/env python
 # -*- coding: utf-8 -*-
@@ -313,17 +312,16 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
-# ═══════════════════════════════════════════════
+#
 # 配置 — 请修改为你的实际路径
-# ═══════════════════════════════════════════════
+#
 
 BASE_MODEL = "{{{{model_path}}}}"     # TODO: 基座模型路径
 LORA_PATH = "{{{{lora_path}}}}"       # TODO: LoRA adapter 路径
 
-
 def load_model():
-    """加载基座模型 + LoRA adapter。"""
-    print("🔧 加载模型...")
+    """加载基座模型 + LoRA adapter"""
+    print(" 加载模型...")
     base = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
         device_map="auto",
@@ -337,15 +335,13 @@ def load_model():
     model = PeftModel.from_pretrained(base, LORA_PATH)
     model = model.merge_and_unload()  # 合并权重，推理更快
     model.eval()
-    print("✅ 模型加载完成")
+    print("[OK] 模型加载完成")
     return model, tokenizer
-
 
 {format_fn_code}
 
-
 def chat(model, tokenizer, prompt: str, max_tokens: int = 512) -> str:
-    """生成回复。使用与微调时一致的 prompt 格式。"""
+    """生成回复使用与微调时一致的 prompt 格式"""
     formatted = format_prompt(prompt)
     inputs = tokenizer(formatted, return_tensors="pt").to(model.device)
 
@@ -365,24 +361,23 @@ def chat(model, tokenizer, prompt: str, max_tokens: int = 512) -> str:
         response = response[len(formatted):].strip()
     return response
 
-
 if __name__ == "__main__":
     model, tokenizer = load_model()
 
-    print("\\n🤖 LoRA 模型对话测试 (输入 'quit' 退出)\\n")
+    print("\\n LoRA 模型对话测试 (输入 'quit' 退出)\\n")
     while True:
-        user_input = input("👤 你: ")
+        user_input = input(" 你: ")
         if user_input.lower() in ["quit", "exit", "q"]:
             break
         reply = chat(model, tokenizer, user_input)
-        print(f"🤖 助手: {{reply}}\\n")
+        print(f" 助手: {{reply}}\\n")
 '''
         return script
 
-    # ── 配置文件 ────────────────────────────────────────────
+    #  配置文件
 
     def build_config_yaml(self) -> str:
-        """生成 YAML 配置文件。"""
+        """生成 YAML 配置文件"""
         config_dict = {
             "skill_version": "2.3.0",
             "generated_at": self.timestamp,
@@ -413,10 +408,10 @@ if __name__ == "__main__":
         }
         return yaml.dump(config_dict, allow_unicode=True, default_flow_style=False)
 
-    # ── 批量生成 ────────────────────────────────────────────
+    #  批量生成
 
     def build_all(self) -> Dict[str, str]:
-        """生成所有文件，返回文件路径字典。"""
+        """生成所有文件，返回文件路径字典"""
         os.makedirs(self.output_dir, exist_ok=True)
 
         train_script = self.build_training_script()

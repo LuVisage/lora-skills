@@ -1,8 +1,8 @@
 """
-训练脚本模板 — 用于 script_builder.py 生成最终训练脚本时参考。
+训练脚本模板 — 用于 script_builder.py 生成最终训练脚本时参考
 
-这是一个 Jinja2 风格的模板文件，{{变量}} 会被实际值替换。
-实际生成由 core/script_builder.py 的 build_training_script() 方法完成。
+这是一个 Jinja2 风格的模板文件，{{变量}} 会被实际值替换
+实际生成由 core/script_builder.py 的 build_training_script() 方法完成
 """
 
 # 模板变量说明：

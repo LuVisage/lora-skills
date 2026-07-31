@@ -1,7 +1,7 @@
 ---
 name: lora-trainer
 version: 2.5.0
-description: LoRA/QLoRA 大模型微调助手：自动分析 JSONL 数据、估算显存、推荐超参数（附理由）、生成可运行训练脚本。支持 Qwen/Llama/Mistral/DeepSeek 等 40+ 模型。当用户提到微调、fine-tune、LoRA、QLoRA、炼丹、SFT、指令微调、继续预训练、显存估算、训练报错、OOM 或询问超参数时自动触发。
+description: LoRA/QLoRA fine-tuning assistant for LLMs. Auto-analyzes JSONL data, estimates VRAM, recommends hyperparameters with reasoning, and generates runnable training scripts. Supports 40+ models across 13 families including Qwen, LLaMA, Mistral, and DeepSeek.
 allowed-tools: Read, Write, Bash(python *), Bash(pip *), Glob, Grep, WebSearch
 effort: high
 ---

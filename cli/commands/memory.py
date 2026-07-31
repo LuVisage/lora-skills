@@ -1,4 +1,4 @@
-"""lora-trainer memory — 显存估算命令。"""
+"""lora-trainer memory — 显存估算命令"""
 
 import json
 
@@ -11,7 +11,6 @@ from rich.text import Text
 from scripts.memory_calc import quick_calc, MODEL_DB
 
 console = Console()
-
 
 @click.command()
 @click.argument("model", metavar="MODEL")
@@ -64,9 +63,9 @@ def memory(
     no_quantize: bool,
     json_output: bool,
 ) -> None:
-    """💾 估算 LoRA 微调所需 GPU 显存。
+    """ 估算 LoRA 微调所需 GPU 显存
 
-    MODEL 为模型名称，如 qwen2-7b、llama3-8b、mistral-7b 等。
+    MODEL 为模型名称，如 qwen2-7bllama3-8bmistral-7b 等
 
     \b
     示例:
@@ -95,7 +94,7 @@ def memory(
             num_modules=modules,
         )
     except Exception as e:
-        console.print(f"[red]❌ 显存计算失败: {e}[/red]")
+        console.print(f"[red][FAIL] 显存计算失败: {e}[/red]")
         raise SystemExit(1)
 
     if json_output:
@@ -108,7 +107,7 @@ def memory(
     if info.get("is_moe"):
         model_desc += f" (MoE, 激活 {info['params']} / 总 {info.get('total_params', '?')})"
 
-    console.print(f"\n[bold cyan]💾 显存估算[/bold cyan]")
+    console.print(f"\n[bold cyan] 显存估算[/bold cyan]")
     console.print(f"   模型: {model} ({model_desc})  |  模式: {mode_label}")
     console.print(f"   序列长度: {seq_length}  |  Batch Size: {batch_size}  |  Rank: {rank}\n")
 
@@ -129,32 +128,32 @@ def memory(
     # 判定
     total_gb = result["total"]
     if total_gb < 6:
-        verdict = "✅ 可在 6GB 显卡运行 (如 RTX 3060/4060 笔记本)"
+        verdict = "[OK] 可在 6GB 显卡运行 (如 RTX 3060/4060 笔记本)"
         style = "green"
     elif total_gb < 8:
-        verdict = "✅ 可在 8GB 显卡运行 (如 RTX 3070/4060Ti)"
+        verdict = "[OK] 可在 8GB 显卡运行 (如 RTX 3070/4060Ti)"
         style = "green"
     elif total_gb < 12:
-        verdict = "✅ 可在 12GB 显卡运行 (如 RTX 3080/4070)"
+        verdict = "[OK] 可在 12GB 显卡运行 (如 RTX 3080/4070)"
         style = "green"
     elif total_gb < 16:
-        verdict = "✅ 可在 16GB 显卡运行 (如 RTX 4080)"
+        verdict = "[OK] 可在 16GB 显卡运行 (如 RTX 4080)"
         style = "green"
     elif total_gb < 24:
-        verdict = "✅ 可在 24GB 显卡运行 (如 RTX 3090/4090)"
+        verdict = "[OK] 可在 24GB 显卡运行 (如 RTX 3090/4090)"
         style = "green"
     elif total_gb < 48:
-        verdict = "⚠️ 需要 48GB 显存 (如 A6000)，建议减小 batch size 或序列长度"
+        verdict = "[WARN] 需要 48GB 显存 (如 A6000)，建议减小 batch size 或序列长度"
         style = "yellow"
     else:
-        verdict = "❌ 显存需求较高，请降低 seq_length、减小 batch_size、或换更小的模型"
+        verdict = "[FAIL] 显存需求较高，请降低 seq_length减小 batch_size或换更小的模型"
         style = "red"
 
     console.print(Panel(verdict, border_style=style))
 
     if not known:
         console.print(
-            "\n[yellow]⚠️ 模型未在数据库中，使用了启发式估算（基于参数量推算架构参数），结果仅供参考。[/yellow]"
+            "\n[yellow][WARN] 模型未在数据库中，使用了启发式估算（基于参数量推算架构参数），结果仅供参考[/yellow]"
         )
 
-    console.print(f"\n[dim]💡 提示: 使用 --help 查看所有选项，包括 --seq-length / --batch-size / --rank / --modules[/dim]")
+    console.print(f"\n[dim] 提示: 使用 --help 查看所有选项，包括 --seq-length / --batch-size / --rank / --modules[/dim]")

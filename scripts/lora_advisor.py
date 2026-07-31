@@ -1,12 +1,11 @@
 """
-LoRA 参数推荐模块 — 根据数据量、模型大小、任务类型推荐最优超参数。
+LoRA 参数推荐模块 — 根据数据量模型大小任务类型推荐最优超参数
 """
 
 from typing import Dict, List, Tuple
 
-
 class LoRAAdvisor:
-    """智能推荐 LoRA 的 r, alpha, target_modules, dropout, learning_rate。"""
+    """智能推荐 LoRA 的 r, alpha, target_modules, dropout, learning_rate"""
 
     def __init__(
         self,
@@ -20,10 +19,10 @@ class LoRAAdvisor:
         self.task_type = task_type.lower()
         self.avg_seq_length = avg_seq_length
 
-    # ── 各参数推荐 ──────────────────────────────────────────
+    #  各参数推荐
 
     def recommend_rank(self) -> Tuple[int, str]:
-        """推荐 LoRA rank (r)。"""
+        """推荐 LoRA rank (r)"""
         # 基础推荐
         if self.num_samples < 500:
             r = 4
@@ -77,7 +76,7 @@ class LoRAAdvisor:
         return r, reason
 
     def recommend_alpha(self, r: int) -> Tuple[int, str]:
-        """推荐 alpha 值。通常 alpha = 2*r，但任务类型会影响。"""
+        """推荐 alpha 值通常 alpha = 2*r，但任务类型会影响"""
         if self.task_type == "cpt":
             alpha = r * 2
             reason = f"CPT：alpha={alpha}（2×rank），标准比例"
@@ -97,7 +96,7 @@ class LoRAAdvisor:
         return alpha, reason
 
     def recommend_target_modules(self) -> Tuple[List[str], str]:
-        """推荐要训练的目标模块。"""
+        """推荐要训练的目标模块"""
         task = self.task_type
         size = self.model_size
 
@@ -118,7 +117,7 @@ class LoRAAdvisor:
             modules = ["q_proj", "v_proj"]
             reason = "通用对话：标准 Q/V 配置"
 
-        # 大模型（≥ 13B）额外加 o_proj
+        # 大模型（ 13B）额外加 o_proj
         large_sizes = {13, 14, 20, 34, 67, 70, 72, 123, 405}
         try:
             size_b = int(self.model_size.replace("b", ""))
@@ -131,7 +130,7 @@ class LoRAAdvisor:
         return modules, reason
 
     def recommend_dropout(self) -> Tuple[float, str]:
-        """推荐 dropout 值。"""
+        """推荐 dropout 值"""
         if self.task_type == "cpt":
             # CPT 数据通常量大，dropout 保持低位
             return 0.05, "CPT 数据量通常较大，低 dropout (0.05)"
@@ -145,7 +144,7 @@ class LoRAAdvisor:
             return 0.0, "大数据集，dropout=0，充分利用数据"
 
     def recommend_lr(self, r: int) -> Tuple[float, str]:
-        """推荐学习率。"""
+        """推荐学习率"""
         # LoRA 典型学习率范围：1e-4 ~ 5e-4
         if r <= 4:
             lr = 1e-4
@@ -179,7 +178,7 @@ class LoRAAdvisor:
         return round(lr, 6), reason
 
     def recommend_epochs(self) -> Tuple[int, str]:
-        """推荐训练轮数。"""
+        """推荐训练轮数"""
         if self.task_type == "cpt":
             return 1, "CPT 数据量大，1 轮足够注入知识，多轮可能过拟合"
         if self.num_samples < 500:
@@ -194,7 +193,7 @@ class LoRAAdvisor:
             return 1, "超大数据集，1 轮避免过拟合"
 
     def recommend_batch_size(self, gpu_memory_gb: float) -> Tuple[int, str]:
-        """根据显存推荐 batch size。"""
+        """根据显存推荐 batch size"""
         if gpu_memory_gb < 8:
             return 1, "显存较小，batch_size=1"
         elif gpu_memory_gb < 16:
@@ -206,10 +205,10 @@ class LoRAAdvisor:
         else:
             return 16, "超大显存，batch_size=16"
 
-    # ── 汇总 ────────────────────────────────────────────────
+    #  汇总
 
     def generate_full_config(self, gpu_memory_gb: float = 24) -> Dict:
-        """生成完整的 LoRA 配置推荐。"""
+        """生成完整的 LoRA 配置推荐"""
         r, r_reason = self.recommend_rank()
         alpha, alpha_reason = self.recommend_alpha(r)
         modules, modules_reason = self.recommend_target_modules()
@@ -246,9 +245,7 @@ class LoRAAdvisor:
             "num_samples": self.num_samples,
         }
 
-
-# ── 便捷函数 ────────────────────────────────────────────────
-
+#  便捷函数
 
 def quick_recommend(
     num_samples: int,
@@ -256,6 +253,6 @@ def quick_recommend(
     task_type: str = "chat",
     gpu_memory_gb: float = 24,
 ) -> Dict:
-    """一行调用，返回完整 LoRA 配置推荐。"""
+    """一行调用，返回完整 LoRA 配置推荐"""
     advisor = LoRAAdvisor(num_samples, model_size, task_type)
     return advisor.generate_full_config(gpu_memory_gb)

@@ -1,11 +1,11 @@
 """
-显存计算模块 — 估算 LoRA 微调所需的 GPU 显存。
+显存计算模块 — 估算 LoRA 微调所需的 GPU 显存
 """
 
 from typing import Dict, Tuple
 
-# ── 模型规格数据库 ─────────────────────────────────────────
-# 记录常见模型的 hidden_dim、num_layers 等信息，用于精确估算
+#  模型规格数据库
+# 记录常见模型的 hidden_dimnum_layers 等信息，用于精确估算
 
 # MODEL_DB: 每个模型的规格参数
 #   params: 总参数量（dense 模型）或激活参数量（MoE 模型）
@@ -14,7 +14,7 @@ from typing import Dict, Tuple
 #   is_moe: MoE 模型标记（可选，默认 False）— MoE 显存按激活参数计算
 #   total_params: MoE 模型的总参数量（可选，仅用于展示）
 MODEL_DB = {
-    # ── Qwen2 系列 ──
+    #  Qwen2 系列
     "qwen2-0.5b":   {"params": 0.5e9,  "hidden": 896,   "layers": 24},
     "qwen2-1.5b":   {"params": 1.5e9,  "hidden": 1536,  "layers": 28},
     "qwen2-7b":     {"params": 7e9,    "hidden": 3584,  "layers": 28},
@@ -22,7 +22,7 @@ MODEL_DB = {
     "qwen2-32b":    {"params": 32e9,   "hidden": 7168,  "layers": 64},
     "qwen2-57b":    {"params": 14e9,   "hidden": 4096,  "layers": 48, "is_moe": True, "total_params": 57e9},
     "qwen2-72b":    {"params": 72e9,   "hidden": 8192,  "layers": 80},
-    # ── Qwen2.5 系列 ──
+    #  Qwen2.5 系列
     "qwen2.5-0.5b": {"params": 0.5e9,  "hidden": 896,   "layers": 24},
     "qwen2.5-1.5b": {"params": 1.5e9,  "hidden": 1536,  "layers": 28},
     "qwen2.5-3b":   {"params": 3e9,    "hidden": 2048,  "layers": 36},
@@ -30,51 +30,50 @@ MODEL_DB = {
     "qwen2.5-14b":  {"params": 14e9,   "hidden": 5120,  "layers": 40},
     "qwen2.5-32b":  {"params": 32e9,   "hidden": 7168,  "layers": 64},
     "qwen2.5-72b":  {"params": 72e9,   "hidden": 8192,  "layers": 80},
-    # ── LLaMA 3 系列 ──
+    #  LLaMA 3 系列
     "llama3-8b":    {"params": 8e9,    "hidden": 4096,  "layers": 32},
     "llama3-70b":   {"params": 70e9,   "hidden": 8192,  "layers": 80},
-    # ── LLaMA 3.1/3.2 系列 ──
+    #  LLaMA 3.1/3.2 系列
     "llama3.1-8b":  {"params": 8e9,    "hidden": 4096,  "layers": 32},
     "llama3.1-70b": {"params": 70e9,   "hidden": 8192,  "layers": 80},
     "llama3.1-405b":{"params": 405e9,  "hidden": 16384, "layers": 126},
     "llama3.2-1b":  {"params": 1e9,    "hidden": 2048,  "layers": 16},
     "llama3.2-3b":  {"params": 3e9,    "hidden": 3072,  "layers": 28},
-    # ── LLaMA 2 系列 ──
+    #  LLaMA 2 系列
     "llama2-7b":    {"params": 7e9,    "hidden": 4096,  "layers": 32},
     "llama2-13b":   {"params": 13e9,   "hidden": 5120,  "layers": 40},
     "llama2-70b":   {"params": 70e9,   "hidden": 8192,  "layers": 80},
-    # ── Mistral 系列 ──
+    #  Mistral 系列
     "mistral-7b":      {"params": 7e9,    "hidden": 4096,  "layers": 32},
     "mistral-nemo":    {"params": 12e9,   "hidden": 5120,  "layers": 40},
     "mistral-large":   {"params": 123e9,  "hidden": 12288, "layers": 88},
-    # ── DeepSeek 系列 ──
+    #  DeepSeek 系列
     "deepseek-7b":     {"params": 7e9,    "hidden": 4096,  "layers": 30},
     "deepseek-67b":    {"params": 67e9,   "hidden": 8192,  "layers": 95},
     "deepseek-v2":     {"params": 21e9,   "hidden": 5120,  "layers": 60,  "is_moe": True, "total_params": 236e9},
     "deepseek-v3":     {"params": 37e9,   "hidden": 7168,  "layers": 61,  "is_moe": True, "total_params": 671e9},
-    # ── ChatGLM 系列 ──
+    #  ChatGLM 系列
     "chatglm3-6b":     {"params": 6e9,    "hidden": 4096,  "layers": 28},
-    # ── Yi 系列 ──
+    #  Yi 系列
     "yi-6b":           {"params": 6e9,    "hidden": 4096,  "layers": 32},
     "yi-34b":          {"params": 34e9,   "hidden": 7168,  "layers": 60},
-    # ── Baichuan2 系列 ──
+    #  Baichuan2 系列
     "baichuan2-7b":    {"params": 7e9,    "hidden": 4096,  "layers": 32},
     "baichuan2-13b":   {"params": 13e9,   "hidden": 5120,  "layers": 40},
-    # ── Phi-3 系列 ──
+    #  Phi-3 系列
     "phi-3-mini":      {"params": 3.8e9,  "hidden": 3072,  "layers": 32},
     "phi-3-small":     {"params": 7e9,    "hidden": 4096,  "layers": 32},
     "phi-3-medium":    {"params": 14e9,   "hidden": 5120,  "layers": 40},
-    # ── Gemma 系列 ──
+    #  Gemma 系列
     "gemma-2b":        {"params": 2e9,    "hidden": 2048,  "layers": 18},
     "gemma-7b":        {"params": 7e9,    "hidden": 3072,  "layers": 28},
-    # ── InternLM2 系列 ──
+    #  InternLM2 系列
     "internlm2-7b":    {"params": 7e9,    "hidden": 4096,  "layers": 32},
     "internlm2-20b":   {"params": 20e9,   "hidden": 6144,  "layers": 48},
 }
 
-
 class MemoryCalculator:
-    """根据模型、序列长度、batch size 等参数估算 GPU 显存需求。"""
+    """根据模型序列长度batch size 等参数估算 GPU 显存需求"""
 
     def __init__(
         self,
@@ -111,9 +110,9 @@ class MemoryCalculator:
         self.lora_r = lora_r
 
     def _lookup_model(self, name: str) -> Dict | None:
-        """模糊匹配模型名称，返回规格参数。
+        """模糊匹配模型名称，返回规格参数
 
-        多个匹配时优先选择参数最接近 7B 的模型（最常用的 LoRA 微调规模）。
+        多个匹配时优先选择参数最接近 7B 的模型（最常用的 LoRA 微调规模）
         """
         if not name:
             return None
@@ -134,7 +133,7 @@ class MemoryCalculator:
         return matches[0][1]
 
     def _estimate_hidden_dim(self) -> int:
-        """根据参数量估算隐藏维度。"""
+        """根据参数量估算隐藏维度"""
         if self.model_params <= 1e9:
             return 2048
         elif self.model_params <= 3e9:
@@ -149,7 +148,7 @@ class MemoryCalculator:
             return 8192
 
     def _estimate_num_layers(self) -> int:
-        """根据参数量估算层数。"""
+        """根据参数量估算层数"""
         if self.model_params <= 1e9:
             return 24
         elif self.model_params <= 3e9:
@@ -163,10 +162,10 @@ class MemoryCalculator:
         else:
             return 80
 
-    # ── 各项显存计算 ────────────────────────────────────────
+    #  各项显存计算
 
     def calc_model_memory(self, quantized: bool = False) -> float:
-        """模型权重显存 (GB)。"""
+        """模型权重显存 (GB)"""
         if quantized:
             bytes_per_param = 0.5  # 4-bit
         else:
@@ -182,7 +181,7 @@ class MemoryCalculator:
         return base + lora_total
 
     def calc_activation_memory(self, gradient_checkpoint: bool = False) -> float:
-        """激活值显存 (GB)。"""
+        """激活值显存 (GB)"""
         # 简化公式：batch * seq * hidden * 2 bytes * layers
         act = (
             self.batch_size * self.seq_length * self.hidden_dim * 2 / 1e9
@@ -194,7 +193,7 @@ class MemoryCalculator:
         return act
 
     def calc_optimizer_memory(self) -> float:
-        """优化器状态显存 (GB)。AdamW 需要 2 倍模型参数的存储。"""
+        """优化器状态显存 (GB)AdamW 需要 2 倍模型参数的存储"""
         return self.model_params * 2 * 2 / 1e9  # FP16 * 2 states
 
     def get_total(
@@ -203,10 +202,10 @@ class MemoryCalculator:
         gradient_checkpoint: bool = True,
         num_modules: int = 2,
     ) -> Dict:
-        """汇总所有显存占用。
+        """汇总所有显存占用
 
-        num_modules: LoRA 目标模块数量。
-          聊天 [q,v] = 2, 代码 [q,k,v,o] = 4, 数学 [q,v,up,down,gate] = 5, 角色扮演 [v] = 1。
+        num_modules: LoRA 目标模块数量
+          聊天 [q,v] = 2, 代码 [q,k,v,o] = 4, 数学 [q,v,up,down,gate] = 5, 角色扮演 [v] = 1
         """
         model_mem = self.calc_model_memory(quantized)
         act_mem = self.calc_activation_memory(gradient_checkpoint)
@@ -235,32 +234,30 @@ class MemoryCalculator:
         }
 
     def recommend(self, total_gb: float, quantized: bool) -> str:
-        """根据总显存给出操作建议。"""
+        """根据总显存给出操作建议"""
         mode = "QLoRA 4-bit" if quantized else "LoRA FP16"
         if total_gb < 6:
-            return f"✅ 可在 6GB 显卡上运行（{mode}，如 RTX 3060/4060 笔记本）"
+            return f"[OK] 可在 6GB 显卡上运行（{mode}，如 RTX 3060/4060 笔记本）"
         elif total_gb < 8:
-            return f"✅ 可在 8GB 显卡上运行（{mode}，如 RTX 3070/4060Ti）"
+            return f"[OK] 可在 8GB 显卡上运行（{mode}，如 RTX 3070/4060Ti）"
         elif total_gb < 12:
-            return f"✅ 可在 12GB 显卡上运行（{mode}，如 RTX 3080/4070）"
+            return f"[OK] 可在 12GB 显卡上运行（{mode}，如 RTX 3080/4070）"
         elif total_gb < 16:
-            return f"✅ 可在 16GB 显卡上运行（{mode}，如 RTX 4080）"
+            return f"[OK] 可在 16GB 显卡上运行（{mode}，如 RTX 4080）"
         elif total_gb < 24:
             if quantized:
-                return f"✅ 可在 24GB 显卡上运行（{mode}，如 RTX 3090/4090）"
+                return f"[OK] 可在 24GB 显卡上运行（{mode}，如 RTX 3090/4090）"
             else:
-                return f"⚠️ 需要 24GB 显存（{mode}，如 RTX 3090/4090）。建议开启 QLoRA"
+                return f"[WARN] 需要 24GB 显存（{mode}，如 RTX 3090/4090）建议开启 QLoRA"
         elif total_gb < 48:
-            return f"⚠️ 需要 48GB 显存（{mode}，如 A6000）。建议减小 batch size 或序列长度"
+            return f"[WARN] 需要 48GB 显存（{mode}，如 A6000）建议减小 batch size 或序列长度"
         else:
             if not quantized:
-                return "❌ 显存不足！请：1) 开启 QLoRA 4-bit 量化  2) 降低 seq_length  3) 减小 batch_size  4) 换更小的模型"
+                return "[FAIL] 显存不足！请：1) 开启 QLoRA 4-bit 量化  2) 降低 seq_length  3) 减小 batch_size  4) 换更小的模型"
             else:
-                return "❌ 显存不足！请：1) 降低 seq_length  2) 减小 batch_size  3) 换更小的模型"
+                return "[FAIL] 显存不足！请：1) 降低 seq_length  2) 减小 batch_size  3) 换更小的模型"
 
-
-# ── 便捷函数 ────────────────────────────────────────────────
-
+#  便捷函数
 
 def quick_calc(
     model_name: str = "qwen2-7b",
@@ -270,9 +267,9 @@ def quick_calc(
     quantized: bool = True,
     num_modules: int = 2,
 ) -> Dict:
-    """一行调用，返回显存估算结果。
+    """一行调用，返回显存估算结果
 
-    num_modules: LoRA target_modules 数量。默认 2 (q_proj + v_proj)。
+    num_modules: LoRA target_modules 数量默认 2 (q_proj + v_proj)
     """
     calc = MemoryCalculator(
         model_name=model_name,

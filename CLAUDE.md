@@ -14,13 +14,13 @@
 ## Architecture
 
 ```
-cli/          → CLI layer (pip install entry point), wraps scripts/
-scripts/      → Pure computation — no decision logic, just math + template rendering
-skills/       → AI agent behavioral rules (SKILL.md), loaded by Claude Code
-agents/       → Sub-agent definitions (Haiku model, fork context)
-commands/     → Slash command definitions (/lora:analyze, /lora:cook, /lora:check-data)
-references/   → Pure data loaded on demand (model specs, recipes, VRAM table, FAQ)
-hooks/        → Session lifecycle hooks (session-start bootstrap)
+cli/           CLI layer (pip install entry point), wraps scripts/
+scripts/       Pure computation — no decision logic, just math + template rendering
+skills/        AI agent behavioral rules (SKILL.md), loaded by Claude Code
+agents/        Sub-agent definitions (Haiku model, fork context)
+commands/      Slash command definitions (/lora:analyze, /lora:cook, /lora:check-data)
+references/    Pure data loaded on demand (model specs, recipes, VRAM table, FAQ)
+hooks/         Session lifecycle hooks (session-start bootstrap)
 ```
 
 ### Key Design Principle
@@ -50,7 +50,7 @@ pip install -e ".[train]"
 
 ```bash
 # Smoke test (all modules + CLI)
-python -c "from scripts.analyzer import quick_analyze; from scripts.memory_calc import quick_calc; from scripts.lora_advisor import quick_recommend; from cli.main import main; r = quick_analyze('examples/sample_data.jsonl'); m = quick_calc('qwen2-7b'); c = quick_recommend(r['length']['total_samples'], '7b', 'chat'); print('✅ OK')"
+python -c "from scripts.analyzer import quick_analyze; from scripts.memory_calc import quick_calc; from scripts.lora_advisor import quick_recommend; from cli.main import main; r = quick_analyze('examples/sample_data.jsonl'); m = quick_calc('qwen2-7b'); c = quick_recommend(r['length']['total_samples'], '7b', 'chat'); print('[OK] OK')"
 
 # npm test
 npm test

@@ -2,8 +2,8 @@
 name: lora:analyze
 version: 2.5.0
 description: >-
-  Full LoRA fine-tuning pipeline: data audit → VRAM estimation → hyperparameter
-  recommendation → training script generation. Use when the user provides
+  Full LoRA fine-tuning pipeline: data audit  VRAM estimation  hyperparameter
+  recommendation  training script generation. Use when the user provides
   training data and wants end-to-end analysis. Trigger: /lora:analyze,
   "analyze my data", "帮我分析微调数据", "看看这个数据能不能微调".
 argument-hint: <data-path> [model] [task] [gpu-gb]
@@ -13,7 +13,7 @@ allowed-tools: Read, Write, Bash(python *), Glob, Grep
 
 # /lora:analyze — 完整分析
 
-数据 → 显存 → 参数 → 脚本，一步到位。
+数据  显存  参数  脚本，一步到位
 
 ## 参数
 
@@ -44,4 +44,4 @@ allowed-tools: Read, Write, Bash(python *), Glob, Grep
 
 ## 执行
 
-加载 lora-trainer skill，执行完整五步流程。参考 SKILL.md 中的示例了解输出格式。
+加载 lora-trainer skill，执行完整五步流程参考 SKILL.md 中的示例了解输出格式

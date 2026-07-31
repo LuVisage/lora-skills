@@ -5,7 +5,7 @@
 <img src="https://img.shields.io/github/license/LuVisage/lora-skills?style=flat-square" alt="license">
 <img src="https://img.shields.io/github/stars/LuVisage/lora-skills?style=flat-square" alt="stars">
 <img src="https://img.shields.io/badge/platform-CLI%20%7C%20Claude%20Code%20%7C%20Cursor%20%7C%20Codex-orange?style=flat-square" alt="platforms">
-<img src="https://img.shields.io/badge/python-≥3.10-blue?style=flat-square" alt="python">
+<img src="https://img.shields.io/badge/python-3.10-blue?style=flat-square" alt="python">
 
 </div>
 
@@ -64,17 +64,17 @@ claude plugin install https://github.com/LuVisage/lora-skills
 
 ```
 lora-trainer
-├── analyze <data>           📊 Data quality audit
-│   └── --json               Machine-readable output
-├── recommend                ⚙️ Hyperparameter recommendation
-│   └── -n SAMPLES -m MODEL -t TASK -g GPU
-├── memory <model>           💾 VRAM estimation
-│   └── -s SEQ -b BATCH -r RANK --modules N
-├── cook                     🚀 One-command script generation
-│   ├── -d DATA -m MODEL -t TASK -g GPU
-│   ├── --interactive        Confirm each parameter
-│   └── --rank/--lr/--epochs Override recommendations
-└── evaluate <test.jsonl>    📏 Evaluation script
+ analyze <data>            Data quality audit
+    --json               Machine-readable output
+ recommend                 Hyperparameter recommendation
+    -n SAMPLES -m MODEL -t TASK -g GPU
+ memory <model>            VRAM estimation
+    -s SEQ -b BATCH -r RANK --modules N
+ cook                      One-command script generation
+    -d DATA -m MODEL -t TASK -g GPU
+    --interactive        Confirm each parameter
+    --rank/--lr/--epochs Override recommendations
+ evaluate <test.jsonl>     Evaluation script
 ```
 
 ### Examples
@@ -135,37 +135,37 @@ Missing a model? Add one line to `references/model-catalog.md` or directly to th
 
 ```
 lora-trainer/
-├── .claude-plugin/                # Claude Code plugin manifest
-│   └── plugin.json
-├── skills/lora-trainer/           # 🔥 Core skill (AI agent brain)
-│   ├── SKILL.md                   # All recommendation rules
-│   └── references/                # Pure data, loaded on demand
-│       ├── model-catalog.md       # Model specs (40+)
-│       ├── recipes.md             # Preset configurations
-│       ├── vram-reference.md      # Quick VRAM lookup table
-│       └── faq.md                 # Frequently asked questions
-├── commands/                      # Slash command definitions (4)
-│   ├── analyze.md                 # /lora:analyze
-│   ├── cook.md                    # /lora:cook
-│   ├── check-data.md              # /lora:check-data
-│   └── debug.md                   # /lora:debug (NEW)
-├── agents/                        # Sub-agent definitions (3)
-├── hooks/                         # Session lifecycle hooks
-├── cli/                           # Standalone CLI (pip install)
-│   ├── main.py
-│   └── commands/
-├── scripts/                       # Python computation layer
-│   ├── analyzer.py
-│   ├── memory_calc.py
-│   ├── lora_advisor.py
-│   ├── script_builder.py
-│   └── evaluator.py
-├── templates/                     # Training script templates
-├── examples/                      # Sample JSONL training data
-├── docs/                          # Blog posts & articles
-├── pyproject.toml                 # Python package config
-├── package.json                   # npm package config
-└── requirements.txt               # Python dependencies
+ .claude-plugin/                # Claude Code plugin manifest
+    plugin.json
+ skills/lora-trainer/           #  Core skill (AI agent brain)
+    SKILL.md                   # All recommendation rules
+    references/                # Pure data, loaded on demand
+        model-catalog.md       # Model specs (40+)
+        recipes.md             # Preset configurations
+        vram-reference.md      # Quick VRAM lookup table
+        faq.md                 # Frequently asked questions
+ commands/                      # Slash command definitions (4)
+    analyze.md                 # /lora:analyze
+    cook.md                    # /lora:cook
+    check-data.md              # /lora:check-data
+    debug.md                   # /lora:debug (NEW)
+ agents/                        # Sub-agent definitions (3)
+ hooks/                         # Session lifecycle hooks
+ cli/                           # Standalone CLI (pip install)
+    main.py
+    commands/
+ scripts/                       # Python computation layer
+    analyzer.py
+    memory_calc.py
+    lora_advisor.py
+    script_builder.py
+    evaluator.py
+ templates/                     # Training script templates
+ examples/                      # Sample JSONL training data
+ docs/                          # Blog posts & articles
+ pyproject.toml                 # Python package config
+ package.json                   # npm package config
+ requirements.txt               # Python dependencies
 ```
 
 ## Design
@@ -198,7 +198,7 @@ from cli.main import main
 r = quick_analyze('examples/sample_data.jsonl')
 m = quick_calc('qwen2-7b')
 c = quick_recommend(r['length']['total_samples'], '7b', 'chat')
-print('✅ All OK')
+print('[OK] All OK')
 "
 
 # CLI smoke test

@@ -4,9 +4,9 @@
 
 | Version | Supported          |
 |---------|--------------------|
-| 2.4.x   | ✅ Actively supported |
-| 2.3.x   | ✅ Security fixes only |
-| < 2.3.0 | ❌ End of life      |
+| 2.4.x   | [OK] Actively supported |
+| 2.3.x   | [OK] Security fixes only |
+| < 2.3.0 | [FAIL] End of life      |
 
 ## Reporting a Vulnerability
 

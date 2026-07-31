@@ -1,6 +1,6 @@
 # LoRA 预置配方
 
-为常见场景预调好的参数组合。可用作快速起点。
+为常见场景预调好的参数组合可用作快速起点
 
 ## 通用聊天 (Chat)
 
@@ -8,7 +8,7 @@
 r=8, alpha=16, modules=[q_proj, v_proj], dropout=0.05, lr=2e-4, epochs=3
 ```
 
-适用：日常对话、客服、通用助手。最常用的配方。
+适用：日常对话客服通用助手最常用的配方
 
 ## 代码生成 (Code)
 
@@ -16,7 +16,7 @@ r=8, alpha=16, modules=[q_proj, v_proj], dropout=0.05, lr=2e-4, epochs=3
 r=16, alpha=32, modules=[q_proj, k_proj, v_proj, o_proj], dropout=0.05, lr=2e-4, epochs=3
 ```
 
-适用：代码补全、Bug 修复、代码翻译、SQL 生成。
+适用：代码补全Bug 修复代码翻译SQL 生成
 
 ## 数学推理 (Math)
 
@@ -24,7 +24,7 @@ r=16, alpha=32, modules=[q_proj, k_proj, v_proj, o_proj], dropout=0.05, lr=2e-4,
 r=16, alpha=16, modules=[q_proj, v_proj, up_proj, down_proj, gate_proj], dropout=0.05, lr=1.5e-4, epochs=2
 ```
 
-适用：数学解题、逻辑推理、定理证明。lr 较低以保护推理链。
+适用：数学解题逻辑推理定理证明lr 较低以保护推理链
 
 ## 角色扮演 (Roleplay)
 
@@ -32,7 +32,7 @@ r=16, alpha=16, modules=[q_proj, v_proj, up_proj, down_proj, gate_proj], dropout
 r=8, alpha=32, modules=[v_proj], dropout=0.05, lr=3e-4, epochs=3
 ```
 
-适用：角色扮演、风格模仿、创意写作。仅训练 V 层以保留基础语言能力。
+适用：角色扮演风格模仿创意写作仅训练 V 层以保留基础语言能力
 
 ## Qwen2-7B 专用
 
@@ -57,7 +57,7 @@ r=16-64, alpha=2×r, modules=[q,k,v,o,up,down,gate], dropout=0.05, lr=5e-5~1e-4,
 强烈建议开启 packing（短文本拼接成长序列）
 ```
 
-适用：领域知识注入（医疗、法律、金融等垂直领域）。
+适用：领域知识注入（医疗法律金融等垂直领域）
 
 CPT vs SFT 关键差异：
 - 不需要 instruction 模板，直接训练原始文本
@@ -67,7 +67,7 @@ CPT vs SFT 关键差异：
 
 ## DoRA（推荐）
 
-所有任务可优先使用 DoRA 替代 LoRA。PEFT 库中设置 `LoraConfig(use_dora=True)` 即可，其他参数不变。数学/代码任务收益最大。
+所有任务可优先使用 DoRA 替代 LoRAPEFT 库中设置 `LoraConfig(use_dora=True)` 即可，其他参数不变数学/代码任务收益最大
 
 ## 极小数据集 (< 200 条)
 
@@ -75,4 +75,4 @@ CPT vs SFT 关键差异：
 r=4, alpha=8-16, dropout=0.15, epochs=5, lr=1e-4
 ```
 
-关键：高 dropout + 低 rank + 多 epochs。宁愿欠拟合也不要过拟合。
+关键：高 dropout + 低 rank + 多 epochs宁愿欠拟合也不要过拟合

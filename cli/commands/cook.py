@@ -1,4 +1,4 @@
-"""lora-trainer cook — 一键生成训练脚本。"""
+"""lora-trainer cook — 一键生成训练脚本"""
 
 import json
 import os
@@ -15,7 +15,6 @@ from scripts.memory_calc import quick_calc
 from scripts.script_builder import ScriptBuilder
 
 console = Console()
-
 
 @click.command()
 @click.option(
@@ -55,7 +54,7 @@ console = Console()
     type=click.Choice(["instruction-output", "messages", "conversations", "auto"]),
     default="auto",
     show_default=True,
-    help="训练数据格式。auto = 自动检测",
+    help="训练数据格式auto = 自动检测",
 )
 @click.option(
     "--interactive", "-i",
@@ -79,7 +78,7 @@ console = Console()
     "--max-seq-length",
     type=int,
     default=None,
-    help="最大序列长度。不指定则根据数据 P95 自动设置",
+    help="最大序列长度不指定则根据数据 P95 自动设置",
 )
 def cook(
     data: str | None,
@@ -97,9 +96,9 @@ def cook(
     json_output: bool,
     max_seq_length: int | None,
 ) -> None:
-    """🚀 一键生成 LoRA 微调训练脚本。
+    """ 一键生成 LoRA 微调训练脚本
 
-    自动完成：数据分析 → 参数推荐 → 脚本生成。
+    自动完成：数据分析  参数推荐  脚本生成
 
     \b
     示例:
@@ -109,18 +108,18 @@ def cook(
       lora-trainer cook -d ./data/train.jsonl --interactive
       lora-trainer cook -d ./data/train.jsonl --json
     """
-    # ── Step 1: 收集信息 ──────────────────────────────
+    #  Step 1: 收集信息
     if not data:
-        console.print("[red]❌ 请指定 --data 参数[/red]")
+        console.print("[red][FAIL] 请指定 --data 参数[/red]")
         console.print("[dim]用法: lora-trainer cook --data ./data/train.jsonl[/dim]")
         raise SystemExit(1)
 
-    # ── Step 2: 分析数据 ──────────────────────────────
-    console.print("[dim]📊 分析数据...[/dim]")
+    #  Step 2: 分析数据
+    console.print("[dim] 分析数据...[/dim]")
     try:
         analysis = quick_analyze(data)
     except Exception as e:
-        console.print(f"[red]❌ 数据分析失败: {e}[/red]")
+        console.print(f"[red][FAIL] 数据分析失败: {e}[/red]")
         raise SystemExit(1)
 
     num_samples = analysis["length"]["total_samples"]
@@ -146,7 +145,7 @@ def cook(
     else:
         seq_len = max_seq_length
 
-    # ── Step 3: GPU 检测 ──────────────────────────────
+    #  Step 3: GPU 检测
     if gpu is None:
         import subprocess
         try:
@@ -155,16 +154,16 @@ def cook(
                 capture_output=True, text=True, timeout=5,
             )
             if result.returncode == 0 and result.stdout.strip():
-                gpu = float(result.stdout.strip().split()[0]) / 1024  # MiB → GB
-                console.print(f"[dim]🔍 检测到 GPU 显存: {gpu:.0f} GB[/dim]")
+                gpu = float(result.stdout.strip().split()[0]) / 1024  # MiB  GB
+                console.print(f"[dim] 检测到 GPU 显存: {gpu:.0f} GB[/dim]")
             else:
                 gpu = 24
         except Exception:
             gpu = 24
-            console.print("[dim]⚠️ 未检测到 GPU，默认 24GB[/dim]")
+            console.print("[dim][WARN] 未检测到 GPU，默认 24GB[/dim]")
 
-    # ── Step 4: 推荐参数 ──────────────────────────────
-    console.print("[dim]⚙️ 推荐参数...[/dim]")
+    #  Step 4: 推荐参数
+    console.print("[dim] 推荐参数...[/dim]")
     config = quick_recommend(
         num_samples=num_samples,
         model_size=model,
@@ -188,7 +187,7 @@ def cook(
         config["batch_size"]["value"] = batch_size
         config["batch_size"]["reason"] += " [用户覆盖]"
 
-    # ── Step 5: 显存估算 ──────────────────────────────
+    #  Step 5: 显存估算
     num_modules = len(config["target_modules"]["value"])
     try:
         mem_result = quick_calc(
@@ -202,7 +201,7 @@ def cook(
     except Exception:
         mem_result = None
 
-    # ── JSON 输出模式 ────────────────────────────────
+    #  JSON 输出模式
     if json_output:
         output = {
             "config": config,
@@ -218,20 +217,20 @@ def cook(
         click.echo(json.dumps(output, ensure_ascii=False, indent=2, default=str))
         return
 
-    # ── 展示配置 ──────────────────────────────────────
-    task_labels = {"chat": "💬 通用对话", "code": "💻 代码", "math": "🧮 数学推理",
-                   "roleplay": "🎭 角色扮演", "cpt": "📚 继续预训练 (CPT)"}
+    #  展示配置
+    task_labels = {"chat": " 通用对话", "code": " 代码", "math": " 数学推理",
+                   "roleplay": " 角色扮演", "cpt": " 继续预训练 (CPT)"}
 
-    console.print(f"\n[bold cyan]📊 数据摘要[/bold cyan]")
+    console.print(f"\n[bold cyan] 数据摘要[/bold cyan]")
     console.print(f"   样本: [bold]{num_samples:,}[/bold] 条  |  P95 Token: {p95_tokens}  |  格式: {data_format}")
     quality = analysis["quality"]
     if quality.get("issues"):
         for issue in quality["issues"]:
-            console.print(f"   [yellow]⚠️ {issue}[/yellow]")
+            console.print(f"   [yellow][WARN] {issue}[/yellow]")
     else:
-        console.print(f"   [green]✅ 数据质量良好[/green]")
+        console.print(f"   [green][OK] 数据质量良好[/green]")
 
-    console.print(f"\n[bold cyan]⚙️ 推荐配置[/bold cyan]")
+    console.print(f"\n[bold cyan] 推荐配置[/bold cyan]")
     console.print(f"   任务: {task_labels.get(task, task)}  |  模型: {model}  |  Max Seq: {seq_len}  |  GPU: {gpu:.0f} GB\n")
 
     table = Table(show_header=True, header_style="bold cyan")
@@ -258,11 +257,11 @@ def cook(
 
     # 显存
     if mem_result:
-        console.print(f"\n[bold cyan]💾 预估显存[/bold cyan]")
+        console.print(f"\n[bold cyan] 预估显存[/bold cyan]")
         console.print(f"   模型权重: {mem_result['model_weight']:.2f} GB  |  激活值: {mem_result['activation']:.2f} GB  |  优化器: {mem_result['optimizer']:.2f} GB")
         console.print(f"   [bold]总计: {mem_result['total']:.2f} GB[/bold] (GPU: {gpu:.0f} GB, 剩余 {gpu - mem_result['total']:.1f} GB)")
 
-    # ── 交互确认 ──────────────────────────────────────
+    #  交互确认
     if interactive:
         console.print()
         if not Confirm.ask("[bold]确认以上配置，开始生成脚本？[/bold]", default=True):
@@ -276,8 +275,8 @@ def cook(
         if Confirm.ask("需要修改 epochs？", default=False):
             config["epochs"]["value"] = int(Prompt.ask("epochs", default=str(config["epochs"]["value"])))
 
-    # ── Step 6: 生成脚本 ──────────────────────────────
-    console.print(f"\n[dim]🔧 生成脚本到 {output_dir}...[/dim]")
+    #  Step 6: 生成脚本
+    console.print(f"\n[dim] 生成脚本到 {output_dir}...[/dim]")
     try:
         builder = ScriptBuilder(
             config=config,
@@ -288,19 +287,19 @@ def cook(
         )
         paths = builder.build_all()
     except Exception as e:
-        console.print(f"[red]❌ 脚本生成失败: {e}[/red]")
+        console.print(f"[red][FAIL] 脚本生成失败: {e}[/red]")
         raise SystemExit(1)
 
-    console.print(f"\n[bold green]✅ 脚本生成完成！[/bold green]")
+    console.print(f"\n[bold green][OK] 脚本生成完成！[/bold green]")
     for key, path in paths.items():
         labels = {"train_script": "训练脚本", "inference_script": "推理脚本", "config": "配置文件"}
-        console.print(f"   📄 {labels.get(key, key)}: [green]{path}[/green]")
+        console.print(f"    {labels.get(key, key)}: [green]{path}[/green]")
 
     console.print(Panel(
         f"1. 编辑训练脚本中的 [bold]MODEL_NAME[/bold] 和 [bold]DATA_PATH[/bold]\n"
         f"2. 安装依赖: [dim]pip install lora-trainer[train][/dim]\n"
         f"3. 运行训练: [dim]python {os.path.basename(paths['train_script'])}[/dim]\n"
         f"4. 训练完成后: [dim]lora-trainer evaluate <test.jsonl>[/dim]",
-        title="📋 下一步",
+        title=" 下一步",
         border_style="green",
     ))

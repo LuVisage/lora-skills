@@ -1,23 +1,22 @@
 """
-lora-trainer CLI — LoRA/QLoRA 微调命令行工具。
+lora-trainer CLI — LoRA/QLoRA 微调命令行工具
 
-从数据分析到训练脚本生成，一行命令搞定。
+从数据分析到训练脚本生成，一行命令搞定
 """
 
 import click
 
 from cli.commands import analyze, recommend, memory, cook, evaluate
 
-
 @click.group()
 @click.version_option(
     package_name="lora-trainer",
-    message="lora-trainer v%(version)s 🦾",
+    message="lora-trainer v%(version)s ",
 )
 def main():
-    """🦾 LoRA / QLoRA 微调命令行工具
+    """ LoRA / QLoRA 微调命令行工具
 
-    从数据分析 → 显存评估 → 参数推荐 → 训练脚本生成，全流程覆盖。
+    从数据分析  显存评估  参数推荐  训练脚本生成，全流程覆盖
 
     \b
     快速开始:
@@ -28,7 +27,6 @@ def main():
       lora-trainer evaluate test.jsonl          # 生成评估脚本
     """
     pass
-
 
 main.add_command(analyze.analyze)
 main.add_command(recommend.recommend)

@@ -6,7 +6,7 @@
 运行: python check_env.py
 
 检测项目:
-  1. Python 版本 (≥ 3.10)
+  1. Python 版本 ( 3.10)
   2. CUDA 驱动 + GPU 信息
   3. PyTorch (CUDA 版本)
   4. 核心依赖 (transformers, peft, datasets, bitsandbytes, accelerate)
@@ -18,19 +18,17 @@ import sys
 import os
 import subprocess
 
-
 def check(label: str, ok: bool, detail: str = "", fix: str = "") -> bool:
-    """打印检查结果，返回是否通过。"""
+    """打印检查结果，返回是否通过"""
     if ok:
-        print(f"  ✅ {label}: {detail}" if detail else f"  ✅ {label}")
+        print(f"  [OK] {label}: {detail}" if detail else f"  [OK] {label}")
     else:
-        print(f"  ❌ {label}")
+        print(f"  [FAIL] {label}")
         if detail:
-            print(f"     → {detail}")
+            print(f"      {detail}")
         if fix:
-            print(f"     🔧 修复: {fix}")
+            print(f"      修复: {fix}")
     return ok
-
 
 def main():
     print("=" * 55)
@@ -38,16 +36,16 @@ def main():
     print("=" * 55)
     all_ok = True
 
-    # ── 1. Python 版本 ──
+    #  1. Python 版本
     py_ver = sys.version_info
     all_ok &= check(
         "Python 版本",
         py_ver >= (3, 10),
         f"Python {py_ver.major}.{py_ver.minor}.{py_ver.micro}",
-        "需要 Python ≥ 3.10: https://python.org/downloads",
+        "需要 Python  3.10: https://python.org/downloads",
     )
 
-    # ── 2. CUDA 驱动 ──
+    #  2. CUDA 驱动
     try:
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=name,memory.total,driver_version,cuda_version",
@@ -56,7 +54,7 @@ def main():
         )
         if result.returncode == 0:
             info = result.stdout.strip()
-            print(f"  ✅ CUDA 驱动 + GPU:")
+            print(f"  [OK] CUDA 驱动 + GPU:")
             for line in info.split("\n"):
                 if line.strip():
                     print(f"     {line.strip()}")
@@ -65,9 +63,9 @@ def main():
     except FileNotFoundError:
         all_ok &= check("nvidia-smi", False, "未找到 nvidia-smi", "安装 NVIDIA 驱动: https://nvidia.com/drivers")
     except Exception:
-        print("  ⚠️ nvidia-smi 检测失败（可能无 GPU）")
+        print("  [WARN] nvidia-smi 检测失败（可能无 GPU）")
 
-    # ── 3. PyTorch ──
+    #  3. PyTorch
     try:
         import torch
         cuda_ok = torch.cuda.is_available()
@@ -75,15 +73,15 @@ def main():
             gpu_count = torch.cuda.device_count()
             gpu_name = torch.cuda.get_device_name(0)
             gpu_mem = torch.cuda.get_device_properties(0).total_mem / 1024**3
-            print(f"  ✅ PyTorch {torch.__version__} + CUDA {torch.version.cuda}")
+            print(f"  [OK] PyTorch {torch.__version__} + CUDA {torch.version.cuda}")
             print(f"     GPU: {gpu_name} ({gpu_mem:.1f} GB) × {gpu_count}")
         else:
-            print(f"  ⚠️ PyTorch {torch.__version__} — CUDA 不可用")
+            print(f"  [WARN] PyTorch {torch.__version__} — CUDA 不可用")
             print(f"     如使用 GPU 训练，请装 CUDA 版: pip install torch --index-url https://download.pytorch.org/whl/cu121")
     except ImportError:
         all_ok &= check("PyTorch", False, "", "pip install torch")
 
-    # ── 4. 核心依赖 ──
+    #  4. 核心依赖
     deps = [
         ("transformers", "pip install transformers"),
         ("peft", "pip install peft"),
@@ -95,11 +93,11 @@ def main():
         try:
             mod = __import__(lib)
             ver = getattr(mod, "__version__", "?")
-            print(f"  ✅ {lib} {ver}")
+            print(f"  [OK] {lib} {ver}")
         except ImportError:
             all_ok &= check(lib, False, "", fix)
 
-    # ── 5. 显存状态 ──
+    #  5. 显存状态
     try:
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=memory.free,memory.used,memory.total",
@@ -116,36 +114,35 @@ def main():
                     used_pct = used_mb / total_mb * 100 if total_mb > 0 else 0
 
                     if free_gb < 6:
-                        status = "⚠️ 紧张 (QLoRA 7B 需 ≥ 6GB)"
+                        status = "[WARN] 紧张 (QLoRA 7B 需  6GB)"
                     elif free_gb < 10:
-                        status = "⚡ 可训练小模型"
+                        status = " 可训练小模型"
                     else:
-                        status = "✅ 充裕"
+                        status = "[OK] 充裕"
 
-                    print(f"  📊 GPU {i}: {free_gb:.1f}/{total_gb:.1f} GB 可用 ({used_pct:.0f}% 占用) — {status}")
+                    print(f"   GPU {i}: {free_gb:.1f}/{total_gb:.1f} GB 可用 ({used_pct:.0f}% 占用) — {status}")
     except Exception:
         pass
 
-    # ── 6. 国内用户网络提示 ──
+    #  6. 国内用户网络提示
     hf_endpoint = os.environ.get("HF_ENDPOINT", "")
     if "hf-mirror.com" in hf_endpoint:
-        print("  🌐 HF 镜像已配置: hf-mirror.com ✅")
+        print("   HF 镜像已配置: hf-mirror.com [OK]")
     else:
-        print("  💡 国内用户可加速下载:")
+        print("   国内用户可加速下载:")
         print("     export HF_ENDPOINT=https://hf-mirror.com")
         print("     或用 ModelScope: pip install modelscope && python -c \"from modelscope import snapshot_download; snapshot_download('模型名', cache_dir='./models')\"")
 
-    # ── 结果 ──
+    #  结果
     print("\n" + "=" * 55)
     if all_ok:
-        print("  ✅ 环境就绪，可以开始微调！")
+        print("  [OK] 环境就绪，可以开始微调！")
         print("=" * 55)
         return 0
     else:
-        print("  ⚠️ 存在问题，修复后重新运行: python check_env.py")
+        print("  [WARN] 存在问题，修复后重新运行: python check_env.py")
         print("=" * 55)
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

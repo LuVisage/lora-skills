@@ -14,9 +14,9 @@ All notable changes to lora-trainer.
 - **`/lora:setup` command** — Environment check + dependency installation
 - **Code snippets** for DoRA, LoRA+, NEFTune in SKILL.md — complete `LoraConfig(...)` examples, not just descriptions
 - **Quick Start section** in SKILL.md — prominent copy-paste examples
-- **Domestic mirror guide** (🇨🇳 国内用户模型下载加速) — hf-mirror.com, ModelScope, and manual download methods for Chinese users
+- **Domestic mirror guide** ( 国内用户模型下载加速) — hf-mirror.com, ModelScope, and manual download methods for Chinese users
 - **Principle #6: 能动手就不动嘴** — agent proactively runs analysis/VRAM/script generation instead of telling users to run commands themselves
-- **`/lora:debug` command** — post-training failure diagnosis from logs, error messages, or symptoms. Matches error signatures → solutions
+- **`/lora:debug` command** — post-training failure diagnosis from logs, error messages, or symptoms. Matches error signatures  solutions
 - **Step 0: Startup check** — version verification and environment probing at each interaction start
 - **Step 5.5: Runtime support** — explicit post-generation follow-up flow; agent commits to helping with OOM, loss issues, bad results after training
 - **Enhanced troubleshooting** — expanded from 6 rows to 17 rows across three tables (environment checks, error messages, training quality). Each entry has specific diagnostic commands and prioritized fixes
@@ -24,7 +24,7 @@ All notable changes to lora-trainer.
 
 ### Changed
 
-- **Five principles → Six principles** — added "能动手就不动嘴" principle
+- **Five principles  Six principles** — added "能动手就不动嘴" principle
 - **Command files** (analyze/cook/check-data) now include richer invocation examples with natural language variants
 - **Troubleshooting table** restructured into three categories: pre-training checks, error messages, and training quality issues
 
@@ -55,7 +55,7 @@ All notable changes to lora-trainer.
 ### Fixed
 
 - Messages/ChatML format data quality checks (format-aware text extraction)
-- Auto-split logic: `"test" not in dataset` → `"test" not in dataset and "eval" not in dataset`
+- Auto-split logic: `"test" not in dataset`  `"test" not in dataset and "eval" not in dataset`
 - `total_steps` f-string NameError in generated training script
 - `{reply}` f-string escaping in inference script template
 
